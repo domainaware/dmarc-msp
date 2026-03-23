@@ -5,7 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException
 
 from dmarc_msp.api.dependencies import ClientServiceDep, DbDep, SettingsDep
-from dmarc_msp.api.schemas import ClientCreate, ClientOffboard, ClientUpdate
+from dmarc_msp.api.schemas import ClientCreate, ClientOffboard, ClientRename, ClientUpdate
 from dmarc_msp.cli.helpers import get_offboarding_service
 from dmarc_msp.models import ClientInfo
 from dmarc_msp.services.clients import ClientAlreadyExistsError, ClientNotFoundError
@@ -50,6 +50,17 @@ def update_client(name: str, body: ClientUpdate, svc: ClientServiceDep):
         return svc.to_info(client)
     except ClientNotFoundError as e:
         raise HTTPException(404, str(e))
+
+
+@router.post("/{name}/rename", response_model=ClientInfo)
+def rename_client(name: str, body: ClientRename, svc: ClientServiceDep):
+    try:
+        client = svc.rename(name, body.new_name)
+        return svc.to_info(client)
+    except ClientNotFoundError as e:
+        raise HTTPException(404, str(e))
+    except ClientAlreadyExistsError as e:
+        raise HTTPException(409, str(e))
 
 
 @router.post("/{name}/offboard")

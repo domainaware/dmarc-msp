@@ -129,6 +129,9 @@ dmarcmsp client show "Acme Corp"
 dmarcmsp client update "Acme Corp" --contact new@acme.com
 dmarcmsp client update "Acme Corp" --retention-days 365
 
+# Rename a client (index prefix and tenant stay the same)
+dmarcmsp client rename "Acme Corp" --new-name "Acme Inc"
+
 # Offboard (preview first, then execute)
 dmarcmsp client offboard "Acme Corp" --dry-run
 dmarcmsp client offboard "Acme Corp"

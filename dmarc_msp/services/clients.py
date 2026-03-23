@@ -111,6 +111,39 @@ class ClientService:
         self.db.refresh(client)
         return client
 
+    def rename(self, current_name: str, new_name: str) -> ClientRow:
+        """Rename a client. Index prefix and tenant name stay the same."""
+        client = self.get(current_name)
+        new_name_lower = new_name.lower().strip()
+
+        # Check the new name isn't already taken
+        existing = (
+            self.db.query(ClientRow)
+            .filter(ClientRow.name == new_name_lower)
+            .first()
+        )
+        if existing and existing.id != client.id:
+            raise ClientAlreadyExistsError(
+                f"Client '{new_name}' already exists"
+            )
+
+        old_name = client.name
+        client.name = new_name_lower
+        self._audit(
+            "client_rename",
+            client_row=client,
+            detail={"old_name": old_name, "new_name": new_name_lower},
+        )
+        self.db.commit()
+        self.db.refresh(client)
+        logger.info(
+            "Renamed client: %s -> %s (prefix=%s unchanged)",
+            old_name,
+            new_name_lower,
+            client.index_prefix,
+        )
+        return client
+
     def to_info(self, client: ClientRow) -> ClientInfo:
         """Convert a DB row to a Pydantic model."""
         return ClientInfo.model_validate(client)

@@ -160,6 +160,29 @@ def update(
 
 
 @app.command()
+def rename(
+    name: str = typer.Argument(..., help="Current client name"),
+    new_name: str = typer.Option(..., "--new-name", help="New client name"),
+    config: Optional[str] = typer.Option(None, "--config", "-c"),
+):
+    """Rename a client. Index prefix and tenant name stay the same."""
+    settings = get_settings(config)
+    db = get_db_session(settings)
+    svc = ClientService(db)
+    try:
+        client = svc.rename(name, new_name)
+        console.print(
+            f"Renamed to [bold]{client.name}[/bold] "
+            f"(index prefix: {client.index_prefix} — unchanged)"
+        )
+    except Exception as e:
+        console.print(f"[red]Error:[/red] {e}")
+        raise typer.Exit(1)
+    finally:
+        db.close()
+
+
+@app.command()
 def offboard(
     name: str = typer.Argument(..., help="Client name"),
     purge_indices: bool = typer.Option(False, "--purge-indices"),

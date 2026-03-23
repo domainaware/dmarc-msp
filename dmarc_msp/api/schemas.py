@@ -19,6 +19,10 @@ class ClientUpdate(BaseModel):
     retention_days: int | None = None
 
 
+class ClientRename(BaseModel):
+    new_name: str
+
+
 class DomainAdd(BaseModel):
     client_name: str
     domain: str

@@ -59,3 +59,27 @@ def test_create_with_custom_prefix(db_session: Session):
     svc = ClientService(db_session)
     client = svc.create("Acme Corp", index_prefix="custom_prefix")
     assert client.index_prefix == "custom_prefix"
+
+
+def test_rename_client(db_session: Session):
+    svc = ClientService(db_session)
+    svc.create("Acme Corp")
+    client = svc.rename("Acme Corp", "Acme Inc")
+    assert client.name == "acme inc"
+    assert client.index_prefix == "acme_corp"  # unchanged
+    assert client.tenant_name == "acme_corp"  # unchanged
+
+    # Old name no longer works
+    with pytest.raises(ClientNotFoundError):
+        svc.get("Acme Corp")
+
+    # New name works
+    assert svc.get("Acme Inc").name == "acme inc"
+
+
+def test_rename_to_existing_raises(db_session: Session):
+    svc = ClientService(db_session)
+    svc.create("Acme Corp")
+    svc.create("HealthCo")
+    with pytest.raises(ClientAlreadyExistsError):
+        svc.rename("Acme Corp", "HealthCo")
