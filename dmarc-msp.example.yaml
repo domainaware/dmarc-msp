@@ -1,48 +1,171 @@
 # dmarc-msp configuration
-# Non-sensitive values only — secrets come from env vars or Docker secret files.
+#
+# Copy to dmarc-msp.yaml and edit. This file is safe to commit —
+# all secrets come from env vars or Docker secret files, never from here.
+#
+# Config is loaded from (in order):
+#   1. /etc/dmarc-msp/config.yaml  (Docker mount)
+#   2. ./dmarc-msp.yaml            (local development)
+# Override any value with env vars prefixed DMARCMSP__ (double underscore
+# for nesting, e.g. DMARCMSP__SERVER__PORT=9000).
 
+# ---------------------------------------------------------------------------
+# MSP identity
+# ---------------------------------------------------------------------------
 msp:
+  # The domain that receives DMARC reports on behalf of all clients.
+  # This is the domain used in clients' _dmarc rua= tags and in the
+  # RFC 7489 authorization TXT records.
   domain: dmarc.msp.example.com
+
+  # The email address that appears in clients' DMARC rua= tags.
+  # All aggregate and forensic reports for all clients arrive here.
   rua_email: reports@dmarc.msp.example.com
 
+# ---------------------------------------------------------------------------
+# DNS provider
+# ---------------------------------------------------------------------------
 dns:
+  # Which provider to use for managing DMARC authorization TXT records
+  # on the MSP's domain. One of: cloudflare, route53, gcp, azure
   provider: cloudflare
+
+  # The DNS zone that contains the MSP domain. Authorization records
+  # are created as subdomains of this zone.
   zone: msp.example.com
+
+  # --- Cloudflare ----------------------------------------------------------
+  # Requires: CLOUDFLARE_API_TOKEN env var or /run/secrets/cloudflare_api_token
+  # The token needs Zone:DNS:Edit permission on the zone above.
+  # No additional config keys are needed — just the token.
   cloudflare: {}
-  # gcp:
-  #   project: my-gcp-project
+
+  # --- AWS Route 53 --------------------------------------------------------
+  # Requires: AWS credentials via the default credential chain
+  # (env vars AWS_ACCESS_KEY_ID + AWS_SECRET_ACCESS_KEY, instance profile,
+  # or ~/.aws/credentials). Install with: pip install dmarc-msp[aws]
   # route53:
-  #   hosted_zone_id: Z1234567890
+  #   # The hosted zone ID for the zone above. Find it in the Route 53
+  #   # console or via: aws route53 list-hosted-zones
+  #   hosted_zone_id: Z1234567890ABCDEF
+
+  # --- Google Cloud DNS ----------------------------------------------------
+  # Requires: GOOGLE_APPLICATION_CREDENTIALS env var pointing to a service
+  # account key JSON file, or /run/secrets/gcp_sa_key. The SA needs the
+  # dns.admin role on the project. Install with: pip install dmarc-msp[gcp]
+  # gcp:
+  #   # The GCP project ID that owns the managed zone.
+  #   project: my-gcp-project
+  #
+  #   # The managed zone name in Cloud DNS. If omitted, derived from the
+  #   # zone value by replacing dots with hyphens (e.g. msp.example.com
+  #   # becomes msp-example-com).
+  #   managed_zone: msp-example-com
+
+  # --- Azure DNS -----------------------------------------------------------
+  # Requires: Azure credentials via DefaultAzureCredential (env vars
+  # AZURE_CLIENT_ID + AZURE_CLIENT_SECRET + AZURE_TENANT_ID, managed
+  # identity, or Azure CLI). Install with: pip install dmarc-msp[azure]
   # azure:
-  #   subscription_id: ...
-  #   resource_group: ...
+  #   # The Azure subscription containing the DNS zone.
+  #   subscription_id: 00000000-0000-0000-0000-000000000000
+  #
+  #   # The resource group containing the DNS zone.
+  #   resource_group: my-resource-group
+  #
+  #   # The DNS zone name in Azure DNS.
   #   zone_name: msp.example.com
 
+# ---------------------------------------------------------------------------
+# OpenSearch
+# ---------------------------------------------------------------------------
 opensearch:
+  # OpenSearch cluster URL. In Docker, this is the internal service name.
   hosts: https://opensearch:9200
+
+  # Admin username. The default OpenSearch admin user.
   username: admin
+
+  # Admin password is resolved at runtime from (in priority order):
+  #   1. OPENSEARCH_ADMIN_PASSWORD env var
+  #   2. /run/secrets/opensearch_admin_password file
+  # Never put the password in this file.
+
+  # Whether to use TLS when connecting to OpenSearch.
   ssl: true
+
+  # Whether to verify the TLS certificate. Set to false if using
+  # self-signed certs (common in Docker deployments).
   verify_certs: true
 
+# ---------------------------------------------------------------------------
+# OpenSearch Dashboards
+# ---------------------------------------------------------------------------
 dashboards:
+  # Dashboards URL. In Docker, this is the internal service name.
   url: https://dashboards:5601
+
+  # Path to the parsedmarc NDJSON saved objects template. This file
+  # is rewritten with per-client index prefixes during onboarding.
+  # Update this file when parsedmarc releases new dashboard versions.
   saved_objects_template: /etc/dmarc-msp/opensearch_dashboards.ndjson
 
+# ---------------------------------------------------------------------------
+# parsedmarc integration
+# ---------------------------------------------------------------------------
 parsedmarc:
+  # Path to parsedmarc's INI config file (informational — not modified
+  # by dmarc-msp, but referenced in documentation and validation).
   config_file: /etc/parsedmarc.ini
+
+  # Path to the YAML domain-to-index-prefix mapping file. This file is
+  # read and written by dmarc-msp to route reports to per-client indices.
+  # parsedmarc reads it via the index_prefix_domain_map INI setting.
   domain_map_file: /etc/parsedmarc_domain_map.yaml
+
+  # Docker container name for parsedmarc. Used to send SIGHUP for
+  # config reload after domain mapping changes. Must match the
+  # container_name in docker-compose.yml.
   container: parsedmarc
 
+# ---------------------------------------------------------------------------
+# Data retention
+# ---------------------------------------------------------------------------
 retention:
+  # Default number of days to retain OpenSearch indices. Applied via an
+  # ISM policy to all dmarc-* indices. Individual clients can override
+  # this with a per-client retention_days value.
   index_default_days: 180
+
+  # Number of days to keep processed DMARC report emails in Maildir
+  # before the cron container deletes them. These are the raw XML/ZIP
+  # files — parsed data lives in OpenSearch independently.
   email_days: 30
 
+# ---------------------------------------------------------------------------
+# Management API server
+# ---------------------------------------------------------------------------
 server:
+  # Bind address for the FastAPI management API.
+  # Use 0.0.0.0 inside Docker (the port mapping handles restriction).
   host: 0.0.0.0
+
+  # Bind port for the management API.
   port: 8000
+
+  # Source IP allowlist. Requests from IPs not in this list receive 403.
+  # Supports individual IPs and CIDR notation (e.g. 10.0.0.0/8).
+  # Only relevant when the API is network-accessible — in the default
+  # Docker setup, port 8000 is bound to 127.0.0.1 only.
   allowed_ips:
     - 127.0.0.1
     - "::1"
 
+# ---------------------------------------------------------------------------
+# Database
+# ---------------------------------------------------------------------------
 database:
+  # SQLAlchemy database URL. SQLite is the default and recommended for
+  # single-node deployments. The triple slash is relative, quadruple is
+  # absolute (e.g. sqlite:////var/lib/dmarc-msp/dmarc_msp.db).
   url: sqlite:////var/lib/dmarc-msp/dmarc_msp.db
