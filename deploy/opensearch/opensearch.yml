@@ -1,0 +1,21 @@
+# OpenSearch node configuration for dmarc-msp
+cluster.name: dmarc-msp
+node.name: dmarc-msp-node
+discovery.type: single-node
+network.host: 0.0.0.0
+
+# Security plugin
+plugins.security.ssl.transport.pemcert_filepath: esnode.pem
+plugins.security.ssl.transport.pemkey_filepath: esnode-key.pem
+plugins.security.ssl.transport.pemtrustedcas_filepath: root-ca.pem
+plugins.security.ssl.http.enabled: true
+plugins.security.ssl.http.pemcert_filepath: esnode.pem
+plugins.security.ssl.http.pemkey_filepath: esnode-key.pem
+plugins.security.ssl.http.pemtrustedcas_filepath: root-ca.pem
+plugins.security.allow_default_init_securityindex: true
+plugins.security.allow_unsafe_democertificates: true
+
+# Multitenancy
+plugins.security.multitenancy.enabled: true
+plugins.security.multitenancy.tenants.preferred:
+  - Private

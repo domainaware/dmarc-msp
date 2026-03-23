@@ -1,0 +1,1 @@
+"""Process signaling for parsedmarc."""

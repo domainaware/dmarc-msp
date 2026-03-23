@@ -1,0 +1,23 @@
+# Postfix configuration template for DMARC report ingestion
+# Variables are substituted by envsubst at container startup.
+
+smtpd_banner = $myhostname ESMTP
+myhostname = ${MSP_DOMAIN}
+mydomain = ${MSP_DOMAIN}
+
+# Accept mail for the DMARC reporting address only
+mydestination = $myhostname, localhost
+virtual_alias_maps = inline:{ reports@${MSP_DOMAIN}=dmarc }
+
+# Deliver to Maildir
+home_mailbox = Maildir/
+mailbox_command =
+
+# TLS (certs from certbot shared volume)
+smtpd_tls_cert_file = /etc/letsencrypt/live/${MSP_DOMAIN}/fullchain.pem
+smtpd_tls_key_file = /etc/letsencrypt/live/${MSP_DOMAIN}/privkey.pem
+smtpd_use_tls = yes
+smtpd_tls_security_level = may
+
+# Size limit for DMARC reports (10MB should be plenty)
+message_size_limit = 10485760

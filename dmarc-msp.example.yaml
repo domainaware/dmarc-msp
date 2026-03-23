@@ -1,0 +1,48 @@
+# dmarc-msp configuration
+# Non-sensitive values only — secrets come from env vars or Docker secret files.
+
+msp:
+  domain: dmarc.msp.example.com
+  rua_email: reports@dmarc.msp.example.com
+
+dns:
+  provider: cloudflare
+  zone: msp.example.com
+  cloudflare: {}
+  # gcp:
+  #   project: my-gcp-project
+  # route53:
+  #   hosted_zone_id: Z1234567890
+  # azure:
+  #   subscription_id: ...
+  #   resource_group: ...
+  #   zone_name: msp.example.com
+
+opensearch:
+  hosts: https://opensearch:9200
+  username: admin
+  ssl: true
+  verify_certs: true
+
+dashboards:
+  url: https://dashboards:5601
+  saved_objects_template: /etc/dmarc-msp/opensearch_dashboards.ndjson
+
+parsedmarc:
+  config_file: /etc/parsedmarc.ini
+  domain_map_file: /etc/parsedmarc_domain_map.yaml
+  container: parsedmarc
+
+retention:
+  index_default_days: 180
+  email_days: 30
+
+server:
+  host: 0.0.0.0
+  port: 8000
+  allowed_ips:
+    - 127.0.0.1
+    - "::1"
+
+database:
+  url: sqlite:////var/lib/dmarc-msp/dmarc_msp.db

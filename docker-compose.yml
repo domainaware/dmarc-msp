@@ -1,0 +1,152 @@
+services:
+  postfix:
+    image: boky/postfix
+    container_name: parsedmarc-postfix
+    ports:
+      - "25:25"
+      - "587:587"
+    volumes:
+      - maildir:/var/mail/dmarc
+      - certs:/etc/letsencrypt:ro
+    environment:
+      - ALLOWED_SENDER_DOMAINS=*
+      - HOSTNAME=${MSP_DOMAIN:-dmarc.msp.example.com}
+    networks:
+      - frontend
+      - backend
+    restart: unless-stopped
+
+  parsedmarc:
+    image: ghcr.io/domainaware/parsedmarc:latest
+    container_name: parsedmarc
+    volumes:
+      - maildir:/var/mail/dmarc
+      - ./parsedmarc.ini:/etc/parsedmarc.ini:ro
+      - ./domain_map.yaml:/etc/parsedmarc_domain_map.yaml:ro
+    depends_on:
+      opensearch:
+        condition: service_healthy
+    networks:
+      - frontend
+      - backend
+    restart: unless-stopped
+
+  opensearch:
+    image: opensearchproject/opensearch:3
+    container_name: parsedmarc-opensearch
+    environment:
+      - cluster.name=dmarc-msp
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - "OPENSEARCH_JAVA_OPTS=-Xms1g -Xmx1g"
+      - OPENSEARCH_INITIAL_ADMIN_PASSWORD=${OPENSEARCH_ADMIN_PASSWORD}
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    volumes:
+      - opensearch-data:/usr/share/opensearch/data
+      - certs:/etc/letsencrypt:ro
+    expose:
+      - "9200"
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sk https://localhost:9200/_cluster/health -u admin:${OPENSEARCH_ADMIN_PASSWORD} | grep -qE '\"status\":\"(green|yellow)\"'"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+  opensearch-dashboards:
+    image: opensearchproject/opensearch-dashboards:3
+    container_name: parsedmarc-dashboards
+    environment:
+      - OPENSEARCH_HOSTS=["https://opensearch:9200"]
+    ports:
+      - "443:5601"
+    volumes:
+      - certs:/etc/letsencrypt:ro
+    depends_on:
+      opensearch:
+        condition: service_healthy
+    networks:
+      - frontend
+      - backend
+    restart: unless-stopped
+
+  certbot:
+    image: certbot/certbot
+    container_name: parsedmarc-certbot
+    volumes:
+      - certs:/etc/letsencrypt
+      - certbot-webroot:/var/www/certbot
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /usr/bin/docker:/usr/bin/docker:ro
+    entrypoint: >
+      sh -c 'trap exit TERM;
+      while :; do
+        certbot renew --quiet
+          --deploy-hook "docker restart parsedmarc-postfix parsedmarc-opensearch parsedmarc-dashboards";
+        sleep 12h & wait $${!};
+      done'
+    networks:
+      - frontend
+      - backend
+    restart: unless-stopped
+
+  cron:
+    image: alpine:3
+    container_name: parsedmarc-cron
+    volumes:
+      - maildir:/var/mail/dmarc
+    entrypoint: >
+      sh -c 'echo "0 3 * * * find /var/mail/dmarc -type f -mtime +${EMAIL_RETENTION_DAYS:-30} -delete" | crontab - && crond -f'
+    environment:
+      - EMAIL_RETENTION_DAYS=${EMAIL_RETENTION_DAYS:-30}
+    networks:
+      - backend
+    restart: unless-stopped
+
+  dmarc-msp:
+    build: .
+    container_name: dmarc-msp
+    command: ["dmarcmsp", "serve"]
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      - OPENSEARCH_ADMIN_PASSWORD=${OPENSEARCH_ADMIN_PASSWORD}
+    secrets:
+      - cloudflare_api_token
+    volumes:
+      - ./dmarc-msp.yaml:/etc/dmarc-msp/config.yaml:ro
+      - ./opensearch/opensearch_dashboards.ndjson:/etc/dmarc-msp/opensearch_dashboards.ndjson:ro
+      - ./domain_map.yaml:/etc/parsedmarc_domain_map.yaml
+      - msp-data:/var/lib/dmarc-msp
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      opensearch:
+        condition: service_healthy
+    networks:
+      - frontend
+      - backend
+    restart: unless-stopped
+
+networks:
+  frontend:
+  backend:
+    internal: true
+
+volumes:
+  maildir:
+  opensearch-data:
+  certs:
+  certbot-webroot:
+  msp-data:
+
+secrets:
+  cloudflare_api_token:
+    file: ./secrets/cloudflare_api_token

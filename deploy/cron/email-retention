@@ -1,0 +1,2 @@
+# Cleanup processed DMARC report emails older than EMAIL_RETENTION_DAYS
+0 3 * * * find /var/mail/dmarc -type f -mtime +30 -delete

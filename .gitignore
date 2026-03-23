@@ -1,0 +1,35 @@
+.env
+secrets/
+!secrets/.gitkeep
+parsedmarc.ini
+dmarc-msp.yaml
+domain_map.yaml
+*.db
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Coverage
+.coverage
+htmlcov/
