@@ -1,0 +1,71 @@
+name: Bug report
+description: Report a reproducible dmarc-msp bug
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: input
+    id: version
+    attributes:
+      label: dmarc-msp version
+      description: Include the dmarc-msp version or commit if known.
+      placeholder: 0.1.0
+    validations:
+      required: true
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      description: Which part of the stack is involved?
+      options:
+        - CLI
+        - API
+        - DNS provider (Cloudflare)
+        - DNS provider (Route 53)
+        - DNS provider (GCP)
+        - DNS provider (Azure)
+        - OpenSearch provisioning
+        - Dashboards
+        - parsedmarc integration
+        - Docker / Compose
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Runtime, container image, OS, Python version, or deployment details.
+      placeholder: Docker on Ubuntu 24.04, Python 3.12, installed from source
+    validations:
+      required: true
+  - type: textarea
+    id: config
+    attributes:
+      label: Sanitized config
+      description: Include the relevant config fragment with secrets removed.
+      render: yaml
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Describe the smallest reproducible sequence you can.
+      placeholder: |
+        1. Configure dmarc-msp with ...
+        2. Run `dmarcmsp ...`
+        3. Observe ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected_actual
+    attributes:
+      label: Expected vs actual behavior
+      description: What did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or traceback
+      description: Paste sanitized logs or a traceback if available.
+      render: text
