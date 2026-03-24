@@ -26,6 +26,7 @@ fi
 
 # Render main.cf from template (only substitute our variables, not Postfix $vars)
 envsubst '$MSP_DOMAIN $TLS_CONFIG' < /etc/postfix/main.cf.template > /etc/postfix/main.cf
+chmod 644 /etc/postfix/main.cf
 
 # Ensure Maildir ownership (volume may be freshly created)
 chown -R dmarc:dmarc /var/mail/dmarc

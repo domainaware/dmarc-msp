@@ -9,6 +9,7 @@ RUN apk add --no-cache postfix gettext ca-certificates && \
 
 COPY main.cf.template /etc/postfix/main.cf.template
 COPY master.cf /etc/postfix/master.cf
+RUN chmod 644 /etc/postfix/main.cf.template /etc/postfix/master.cf
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
