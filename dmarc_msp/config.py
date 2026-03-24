@@ -11,8 +11,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class MSPConfig(BaseModel):
-    domain: str = "dmarc.msp.example.com"
-    rua_email: str = "reports@dmarc.msp.example.com"
+    domain: str = "dmarc.msp-example.com"
+    rua_email: str = "reports@dmarc.msp-example.com"
 
 
 class DNSProviderConfig(BaseModel):

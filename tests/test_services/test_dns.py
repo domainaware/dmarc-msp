@@ -7,8 +7,8 @@ from tests.test_dns_providers.test_base import FakeDNSProvider
 
 def test_authorization_record_name():
     settings = Settings(
-        msp={"domain": "dmarc.msp.example.com"},
-        dns={"zone": "msp.example.com"},
+        msp={"domain": "dmarc.msp-example.com"},
+        dns={"zone": "msp-example.com"},
         opensearch={"password": "test"},
     )
     provider = FakeDNSProvider()
@@ -20,8 +20,8 @@ def test_authorization_record_name():
 
 def test_create_and_verify_authorization_record():
     settings = Settings(
-        msp={"domain": "dmarc.msp.example.com"},
-        dns={"zone": "msp.example.com"},
+        msp={"domain": "dmarc.msp-example.com"},
+        dns={"zone": "msp-example.com"},
         opensearch={"password": "test"},
     )
     provider = FakeDNSProvider()
@@ -35,8 +35,8 @@ def test_create_and_verify_authorization_record():
 
 def test_delete_authorization_record():
     settings = Settings(
-        msp={"domain": "dmarc.msp.example.com"},
-        dns={"zone": "msp.example.com"},
+        msp={"domain": "dmarc.msp-example.com"},
+        dns={"zone": "msp-example.com"},
         opensearch={"password": "test"},
     )
     provider = FakeDNSProvider()

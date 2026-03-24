@@ -1,6 +1,6 @@
 services:
   postfix:
-    image: boky/postfix
+    build: ./deploy/postfix
     container_name: parsedmarc-postfix
     ports:
       - "25:25"
@@ -9,11 +9,9 @@ services:
       - maildir:/var/mail/dmarc
       - certs:/etc/letsencrypt:ro
     environment:
-      - ALLOWED_SENDER_DOMAINS=*
-      - HOSTNAME=${MSP_DOMAIN:-dmarc.msp.example.com}
+      - MSP_DOMAIN=${MSP_DOMAIN:-dmarc.msp-example.com}
     networks:
       - frontend
-      - backend
     restart: unless-stopped
 
   parsedmarc:
@@ -98,19 +96,6 @@ services:
       - backend
     restart: unless-stopped
 
-  cron:
-    image: alpine:3
-    container_name: parsedmarc-cron
-    volumes:
-      - maildir:/var/mail/dmarc
-    entrypoint: >
-      sh -c 'echo "0 3 * * * find /var/mail/dmarc -type f -mtime +${EMAIL_RETENTION_DAYS:-30} -delete" | crontab - && crond -f'
-    environment:
-      - EMAIL_RETENTION_DAYS=${EMAIL_RETENTION_DAYS:-30}
-    networks:
-      - backend
-    restart: unless-stopped
-
   dmarc-msp:
     build: .
     container_name: dmarc-msp
@@ -119,12 +104,21 @@ services:
       - "127.0.0.1:8000:8000"
     environment:
       - OPENSEARCH_ADMIN_PASSWORD=${OPENSEARCH_ADMIN_PASSWORD}
-    secrets:
-      - cloudflare_api_token
+      - CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN:-}
+      # Uncomment for your DNS provider:
+      # - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
+      # - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
+      # - AZURE_CLIENT_ID=${AZURE_CLIENT_ID:-}
+      # - AZURE_CLIENT_SECRET=${AZURE_CLIENT_SECRET:-}
+      # - AZURE_TENANT_ID=${AZURE_TENANT_ID:-}
+    # GCP requires a service account key file — uncomment if using GCP:
+    # secrets:
+    #   - gcp_sa_key
     volumes:
       - ./dmarc-msp.yaml:/etc/dmarc-msp/config.yaml:ro
       - ./opensearch/opensearch_dashboards.ndjson:/etc/dmarc-msp/opensearch_dashboards.ndjson:ro
       - ./domain_map.yaml:/etc/parsedmarc_domain_map.yaml
+      - maildir:/var/mail/dmarc
       - msp-data:/var/lib/dmarc-msp
       - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
@@ -147,6 +141,7 @@ volumes:
   certbot-webroot:
   msp-data:
 
-secrets:
-  cloudflare_api_token:
-    file: ./secrets/cloudflare_api_token
+# Uncomment if using GCP DNS (the only provider that requires a key file).
+# secrets:
+#   gcp_sa_key:
+#     file: ./secrets/gcp_sa_key.json

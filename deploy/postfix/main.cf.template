@@ -1,23 +1,54 @@
-# Postfix configuration template for DMARC report ingestion
-# Variables are substituted by envsubst at container startup.
+# Postfix main.cf — receive-only MTA for DMARC report ingestion
+# Variables substituted by envsubst at container startup.
 
+# Identity
 smtpd_banner = $myhostname ESMTP
 myhostname = ${MSP_DOMAIN}
 mydomain = ${MSP_DOMAIN}
+myorigin = $mydomain
 
-# Accept mail for the DMARC reporting address only
-mydestination = $myhostname, localhost
+# Accept mail for our domain only
+mydestination = $myhostname, $mydomain, localhost
+
+# Map reports@domain -> local user "dmarc"
 virtual_alias_maps = inline:{ reports@${MSP_DOMAIN}=dmarc }
 
-# Deliver to Maildir
+# Reject any recipient not in the alias map.
+# After alias expansion, local_recipient_maps checks /etc/passwd.
+# Only the "dmarc" user exists, so anything else is rejected.
+
+# Local delivery to Maildir
 home_mailbox = Maildir/
 mailbox_command =
 
-# TLS (certs from certbot shared volume)
-smtpd_tls_cert_file = /etc/letsencrypt/live/${MSP_DOMAIN}/fullchain.pem
-smtpd_tls_key_file = /etc/letsencrypt/live/${MSP_DOMAIN}/privkey.pem
-smtpd_use_tls = yes
-smtpd_tls_security_level = may
+# No relay — ever
+mynetworks = 127.0.0.0/8 [::1]/128
+relay_domains =
+smtpd_relay_restrictions = permit_mynetworks, reject_unauth_destination
 
-# Size limit for DMARC reports (10MB should be plenty)
+# Recipient restrictions
+smtpd_recipient_restrictions =
+    permit_mynetworks,
+    reject_unauth_destination,
+    reject_unlisted_recipient
+
+# No SASL (inbound DMARC senders don't authenticate)
+smtpd_sasl_auth_enable = no
+
+# TLS (conditional — set by entrypoint.sh)
+${TLS_CONFIG}
+
+# Message size limit (10 MB)
 message_size_limit = 10485760
+
+# Logging to stdout for Docker
+maillog_file = /dev/stdout
+
+# Listen on all interfaces
+inet_interfaces = all
+inet_protocols = ipv4
+
+# Hardening
+disable_vrfy_command = yes
+smtpd_helo_required = yes
+strict_rfc821_envelopes = yes

@@ -38,7 +38,7 @@ The entire stack deploys via a single `docker compose up`: SMTP ingestion, parse
 ### Prerequisites
 
 - Docker and Docker Compose
-- A domain for receiving DMARC reports (e.g., `dmarc.msp.example.com`)
+- A domain for receiving DMARC reports (e.g., `dmarc.msp-example.com`)
 - DNS provider API credentials (Cloudflare, Route 53, GCP, or Azure)
 
 ### 1. Clone and configure
@@ -53,27 +53,28 @@ cp parsedmarc.example.ini parsedmarc.ini
 cp dmarc-msp.example.yaml dmarc-msp.yaml
 chmod 600 .env parsedmarc.ini
 
-# Set your OpenSearch admin password in both files
+# Set your MSP domain, OpenSearch password, and DNS provider credentials
+# (see DNS Providers section for which env vars your provider needs)
 $EDITOR .env
-$EDITOR parsedmarc.ini
 
-# Create DNS provider secret
-mkdir -p secrets && chmod 700 secrets
-echo "your-cloudflare-token" > secrets/cloudflare_api_token
-chmod 600 secrets/*
+# Set the same OpenSearch password here (replace CHANGEME)
+$EDITOR parsedmarc.ini
 
 # Initialize the domain map (empty file — dmarc-msp will populate it)
 touch domain_map.yaml
 
-# Edit the config with your MSP domain and DNS zone
+# Edit the config — set your MSP domain, DNS zone, and provider
 $EDITOR dmarc-msp.yaml
+
+# Uncomment the env vars for your DNS provider in docker-compose.yml
+$EDITOR docker-compose.yml
 ```
 
 ### 2. Obtain TLS certificate
 
 ```bash
 docker compose run --rm certbot certonly \
-  --standalone -d dmarc.msp.example.com \
+  --standalone -d dmarc.msp-example.com \
   --agree-tos -m admin@msp.example.com
 ```
 
@@ -204,7 +205,7 @@ API docs are available at `http://localhost:8000/docs` (Swagger UI).
 
 ## How It Works
 
-1. **One email address** (`reports@dmarc.msp.example.com`) receives all DMARC reports for all clients via Postfix.
+1. **One email address** (`reports@dmarc.msp-example.com`) receives all DMARC reports for all clients via Postfix.
 2. **parsedmarc** processes the reports and routes them to per-client OpenSearch indices using a YAML domain-to-index-prefix mapping file.
 3. **OpenSearch** stores the parsed reports. Each client is isolated via tenants, roles, and index prefixes.
 4. **OpenSearch Dashboards** provides per-client views. Clients log in and see only their own tenant's data.
@@ -215,29 +216,25 @@ API docs are available at `http://localhost:8000/docs` (Swagger UI).
 When a client's `_dmarc` record sends reports to your MSP's address, report senders check for an authorization record on your domain. Without it, reports are silently dropped. dmarc-msp automatically creates these records:
 
 ```text
-client.example.com._report._dmarc.dmarc.msp.example.com.  TXT  "v=DMARC1"
+client.example.com._report._dmarc.dmarc.msp-example.com.  TXT  "v=DMARC1"
 ```
 
 ## DNS Providers
 
-Configure the provider in `dmarc-msp.yaml`:
+Set `dns.provider` in `dmarc-msp.yaml` and configure credentials in `.env`. Then uncomment the matching environment variables in the `dmarc-msp` service in `docker-compose.yml`.
 
-| Provider   | Config key   | Credentials                                       |
-|------------|--------------|---------------------------------------------------|
-| Cloudflare | `cloudflare` | `CLOUDFLARE_API_TOKEN` env or Docker secret       |
-| Route 53   | `route53`    | AWS default credential chain                      |
-| GCP        | `gcp`        | Service account key via Docker secret             |
-| Azure      | `azure`      | `DefaultAzureCredential` (env vars or managed ID) |
+|Provider|`dns.provider`|Credentials (set in `.env`)|pip extra|
+|--|--|--|--|
+|Cloudflare|`cloudflare`|`CLOUDFLARE_API_TOKEN` — API token with Zone:DNS:Edit permission|*(included)*|
+|Route 53|`route53`|`AWS_ACCESS_KEY_ID` + `AWS_SECRET_ACCESS_KEY`|`dmarc-msp[aws]`|
+|GCP|`gcp`|`secrets/gcp_sa_key.json` — service account key file (Docker secret)|`dmarc-msp[gcp]`|
+|Azure|`azure`|`AZURE_CLIENT_ID` + `AZURE_CLIENT_SECRET` + `AZURE_TENANT_ID`|`dmarc-msp[azure]`|
 
-Install provider-specific dependencies:
+Most providers use environment variables in `.env`. GCP is the exception — it requires a JSON key file, configured as a Docker secret. Uncomment the `secrets:` entries in `docker-compose.yml` if using GCP.
 
-```bash
-pip install dmarc-msp[gcp]    # Google Cloud DNS
-pip install dmarc-msp[aws]    # AWS Route 53
-pip install dmarc-msp[azure]  # Azure DNS
-```
+Cloudflare is the default and its dependency is included in the base install. For other providers, install the corresponding pip extra (e.g., `pip install dmarc-msp[aws]`).
 
-Cloudflare is included by default.
+See `dmarc-msp.example.yaml` for the full set of provider-specific config options.
 
 ## Production Deployment
 

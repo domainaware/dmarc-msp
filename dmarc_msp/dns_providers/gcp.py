@@ -3,10 +3,14 @@
 from __future__ import annotations
 
 import logging
+import os
+from pathlib import Path
 
 from dmarc_msp.dns_providers.base import DNSProvider, DNSRecord
 
 logger = logging.getLogger(__name__)
+
+GCP_SECRET_PATH = "/run/secrets/gcp_sa_key"
 
 
 class GCPDNSProvider(DNSProvider):
@@ -19,6 +23,14 @@ class GCPDNSProvider(DNSProvider):
             raise ImportError(
                 "Install the 'gcp' extra: pip install dmarc-msp[gcp]"
             ) from e
+
+        # Point the Google auth library at the Docker secret if it exists
+        # and GOOGLE_APPLICATION_CREDENTIALS isn't already set.
+        if not os.environ.get("GOOGLE_APPLICATION_CREDENTIALS") and Path(
+            GCP_SECRET_PATH
+        ).exists():
+            os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = GCP_SECRET_PATH
+
         self._dns_client = gdns.Client(project=project)
         self._managed_zone_name = managed_zone
         self._zone_cache: dict[str, object] = {}

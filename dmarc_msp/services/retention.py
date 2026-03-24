@@ -1,8 +1,10 @@
-"""ISM policy management for index retention."""
+"""ISM policy management and email retention."""
 
 from __future__ import annotations
 
 import logging
+import time
+from pathlib import Path
 
 from opensearchpy import OpenSearch
 
@@ -12,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 class RetentionService:
-    """Manages Index State Management (ISM) policies for data retention."""
+    """Manages ISM policies for index retention and Maildir email cleanup."""
 
     def __init__(
         self,
@@ -30,6 +32,7 @@ class RetentionService:
             ssl_show_warn=False,
         )
         self.default_days = retention_config.index_default_days
+        self.email_days = retention_config.email_days
 
     def ensure_default_policy(self) -> None:
         """Create or update the default ISM policy for DMARC indices."""
@@ -100,3 +103,34 @@ class RetentionService:
             retention_days,
             index_pattern,
         )
+
+    def cleanup_emails(self, maildir_path: str) -> int:
+        """Delete processed email files older than email_days.
+
+        Returns the number of files deleted.
+        """
+        maildir = Path(maildir_path)
+        if not maildir.exists():
+            logger.warning("Maildir path does not exist: %s", maildir_path)
+            return 0
+
+        cutoff = time.time() - (self.email_days * 86400)
+        deleted = 0
+
+        for filepath in maildir.rglob("*"):
+            if not filepath.is_file():
+                continue
+            try:
+                if filepath.stat().st_mtime < cutoff:
+                    filepath.unlink()
+                    deleted += 1
+            except OSError as e:
+                logger.warning("Failed to delete %s: %s", filepath, e)
+
+        logger.info(
+            "Email cleanup: deleted %d files older than %d days from %s",
+            deleted,
+            self.email_days,
+            maildir_path,
+        )
+        return deleted

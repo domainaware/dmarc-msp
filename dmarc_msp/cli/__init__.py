@@ -8,6 +8,7 @@ from dmarc_msp.cli.client import app as client_app
 from dmarc_msp.cli.dashboard import app as dashboard_app
 from dmarc_msp.cli.domain import app as domain_app
 from dmarc_msp.cli.parsedmarc import app as parsedmarc_app
+from dmarc_msp.cli.retention import app as retention_app
 from dmarc_msp.cli.server import app as server_app
 from dmarc_msp.cli.tenant import app as tenant_app
 
@@ -22,6 +23,7 @@ app.add_typer(domain_app, name="domain")
 app.add_typer(tenant_app, name="tenant")
 app.add_typer(dashboard_app, name="dashboard")
 app.add_typer(parsedmarc_app, name="parsedmarc")
+app.add_typer(retention_app, name="retention")
 app.add_typer(server_app, name="server", hidden=True)
 
 

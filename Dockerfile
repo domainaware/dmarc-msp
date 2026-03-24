@@ -1,12 +1,9 @@
-FROM python:3.12-slim
+FROM python:3.13-alpine
 
 WORKDIR /app
 
-# Install docker CLI for container signaling
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends curl && \
-    curl -fsSL https://get.docker.com | sh && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
+# Install docker CLI for container signaling and build deps for any C extensions
+RUN apk add --no-cache docker-cli
 
 COPY pyproject.toml .
 RUN pip install --no-cache-dir .
@@ -14,5 +11,8 @@ RUN pip install --no-cache-dir .
 COPY . .
 RUN pip install --no-cache-dir -e .
 
-# Default: run as API server
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]
 CMD ["dmarcmsp", "serve"]

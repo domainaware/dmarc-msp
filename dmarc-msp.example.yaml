@@ -16,11 +16,11 @@ msp:
   # The domain that receives DMARC reports on behalf of all clients.
   # This is the domain used in clients' _dmarc rua= tags and in the
   # RFC 7489 authorization TXT records.
-  domain: dmarc.msp.example.com
+  domain: dmarc.msp-example.com
 
   # The email address that appears in clients' DMARC rua= tags.
   # All aggregate and forensic reports for all clients arrive here.
-  rua_email: reports@dmarc.msp.example.com
+  rua_email: reports@dmarc.msp-example.com
 
 # ---------------------------------------------------------------------------
 # DNS provider
@@ -35,7 +35,7 @@ dns:
   zone: msp.example.com
 
   # --- Cloudflare ----------------------------------------------------------
-  # Requires: CLOUDFLARE_API_TOKEN env var or /run/secrets/cloudflare_api_token
+  # Requires: CLOUDFLARE_API_TOKEN environment variable 
   # The token needs Zone:DNS:Edit permission on the zone above.
   # No additional config keys are needed — just the token.
   cloudflare: {}
@@ -50,9 +50,10 @@ dns:
   #   hosted_zone_id: Z1234567890ABCDEF
 
   # --- Google Cloud DNS ----------------------------------------------------
-  # Requires: GOOGLE_APPLICATION_CREDENTIALS env var pointing to a service
-  # account key JSON file, or /run/secrets/gcp_sa_key. The SA needs the
-  # dns.admin role on the project. Install with: pip install dmarc-msp[gcp]
+  # Requires: A service account key JSON file mounted as a Docker secret
+  # at /run/secrets/gcp_sa_key (automatically detected — no env var needed).
+  # The SA needs the dns.admin role on the project.
+  # Install with: pip install dmarc-msp[gcp]
   # gcp:
   #   # The GCP project ID that owns the managed zone.
   #   project: my-gcp-project
@@ -63,7 +64,7 @@ dns:
   #   managed_zone: msp-example-com
 
   # --- Azure DNS -----------------------------------------------------------
-  # Requires: Azure credentials via DefaultAzureCredential (env vars
+  # Requires: Azure credentials via DefaultAzureCredential (environment variables
   # AZURE_CLIENT_ID + AZURE_CLIENT_SECRET + AZURE_TENANT_ID, managed
   # identity, or Azure CLI). Install with: pip install dmarc-msp[azure]
   # azure:
