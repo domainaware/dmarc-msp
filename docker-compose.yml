@@ -87,8 +87,7 @@ services:
     entrypoint: >
       sh -c 'trap exit TERM;
       while :; do
-        certbot renew --quiet
-          --deploy-hook "docker restart parsedmarc-postfix parsedmarc-opensearch parsedmarc-dashboards";
+        certbot renew --quiet --deploy-hook "docker kill -s HUP parsedmarc-postfix && docker restart parsedmarc-opensearch parsedmarc-dashboards";
         sleep 12h & wait $${!};
       done'
     networks:
