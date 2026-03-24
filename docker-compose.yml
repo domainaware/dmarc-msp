@@ -79,6 +79,8 @@ services:
   certbot:
     image: certbot/certbot
     container_name: parsedmarc-certbot
+    ports:
+      - "80:80"
     volumes:
       - certs:/etc/letsencrypt
       - certbot-webroot:/var/www/certbot

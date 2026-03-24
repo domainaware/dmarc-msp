@@ -73,9 +73,9 @@ $EDITOR docker-compose.yml
 ### 2. Obtain TLS certificate
 
 ```bash
-docker compose run --rm certbot certonly \
+docker compose run --rm --entrypoint certbot certbot certonly \
   --standalone -d dmarc.msp-example.com \
-  --agree-tos -m admin@msp.example.com
+  --agree-tos -m admin@msp-example.com
 ```
 
 ### 3. Start the stack
