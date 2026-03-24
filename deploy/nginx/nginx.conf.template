@@ -46,8 +46,7 @@ http {
         add_header Strict-Transport-Security "max-age=63072000; includeSubDomains" always;
 
         location / {
-            proxy_pass https://opensearch-dashboards:5601;
-            proxy_ssl_verify off;
+            proxy_pass http://opensearch-dashboards:5601;
 
             proxy_http_version 1.1;
             proxy_set_header Upgrade $http_upgrade;
