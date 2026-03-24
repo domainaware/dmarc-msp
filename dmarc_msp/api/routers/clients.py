@@ -14,7 +14,13 @@ router = APIRouter()
 
 
 @router.post("", response_model=ClientInfo, status_code=201)
-def create_client(body: ClientCreate, svc: ClientServiceDep):
+def create_client(
+    body: ClientCreate,
+    svc: ClientServiceDep,
+    os_svc: OpenSearchServiceDep,
+    dash_svc: DashboardServiceDep,
+    settings: SettingsDep,
+):
     try:
         client = svc.create(
             name=body.name,
@@ -23,6 +29,20 @@ def create_client(body: ClientCreate, svc: ClientServiceDep):
             notes=body.notes,
             retention_days=body.retention_days,
         )
+        # Provision OpenSearch tenant, role, and dashboards
+        os_svc.provision_tenant(client.tenant_name)
+        os_svc.create_client_role(client.tenant_name, client.index_prefix)
+        if client.retention_days:
+            from dmarc_msp.services.retention import RetentionService
+
+            ret_svc = RetentionService(settings.opensearch, settings.retention)
+            ret_svc.create_client_policy(
+                client.index_prefix, client.retention_days
+            )
+        try:
+            dash_svc.import_for_client(client.tenant_name, client.index_prefix)
+        except FileNotFoundError:
+            pass  # Dashboard template not available
         return svc.to_info(client)
     except ClientAlreadyExistsError as e:
         raise HTTPException(409, str(e))

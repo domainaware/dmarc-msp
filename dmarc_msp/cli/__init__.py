@@ -21,7 +21,7 @@ app = typer.Typer(
 app.add_typer(client_app, name="client")
 app.add_typer(domain_app, name="domain")
 app.add_typer(tenant_app, name="tenant")
-app.add_typer(dashboard_app, name="dashboard")
+app.add_typer(dashboard_app, name="dashboards")
 app.add_typer(parsedmarc_app, name="parsedmarc")
 app.add_typer(retention_app, name="retention")
 app.add_typer(server_app, name="server", hidden=True)
