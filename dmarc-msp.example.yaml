@@ -94,9 +94,11 @@ opensearch:
   # Whether to use TLS when connecting to OpenSearch.
   ssl: true
 
-  # Whether to verify the TLS certificate. Set to false if using
-  # self-signed certs (common in Docker deployments).
-  verify_certs: true
+  # Whether to verify the TLS certificate. Set to false when using
+  # OpenSearch's demo certificates (the default in Docker), since they
+  # won't match the container hostname. Set to true if you configure
+  # OpenSearch with properly issued certificates.
+  verify_certs: false
 
 # ---------------------------------------------------------------------------
 # OpenSearch Dashboards
