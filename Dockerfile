@@ -5,7 +5,7 @@ WORKDIR /app
 # Install docker CLI for container signaling and build deps for any C extensions
 RUN apk add --no-cache docker-cli
 
-COPY pyproject.toml .
+COPY pyproject.toml README.md ./
 RUN pip install --no-cache-dir .
 
 COPY . .
