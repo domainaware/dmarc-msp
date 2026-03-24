@@ -44,7 +44,7 @@ The entire stack deploys via a single `docker compose up`: SMTP ingestion, parse
 ### 1. Clone and configure
 
 ```bash
-git clone https://github.com/your-org/dmarc-msp.git
+git clone https://github.com/domainaware/dmarc-msp.git
 cd dmarc-msp
 
 # Copy templates
@@ -238,6 +238,79 @@ pip install dmarc-msp[azure]  # Azure DNS
 ```
 
 Cloudflare is included by default.
+
+## Production Deployment
+
+For a production server, create a dedicated system user and a systemd service so the stack starts at boot.
+
+### System user setup
+
+```bash
+# Create a system user (don't create home dir — git clone will)
+sudo useradd -r -d /opt/dmarc-msp -s /bin/bash dmarc-msp
+
+# Add it to the docker group
+sudo usermod -aG docker dmarc-msp
+
+# Add your own user to the docker group so you can run docker commands
+# without sudo (log out and back in for this to take effect)
+sudo usermod -aG docker $USER
+
+# Clone the repo as the dmarc-msp user
+sudo -u dmarc-msp git clone https://github.com/domainaware/dmarc-msp.git /opt/dmarc-msp
+```
+
+Then follow the [Quick Start](#quick-start) configuration steps (copy templates, set passwords, create secrets) inside `/opt/dmarc-msp`, running commands with `sudo -u dmarc-msp`:
+
+```bash
+cd /opt/dmarc-msp
+sudo -u dmarc-msp cp .env.example .env
+sudo -u dmarc-msp cp parsedmarc.example.ini parsedmarc.ini
+sudo -u dmarc-msp cp dmarc-msp.example.yaml dmarc-msp.yaml
+# ... edit files, create secrets, etc.
+```
+
+### systemd service
+
+Create `/etc/systemd/system/dmarc-msp.service`:
+
+```ini
+[Unit]
+Description=DMARC for MSPs
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+User=dmarc-msp
+Group=dmarc-msp
+WorkingDirectory=/opt/dmarc-msp
+ExecStart=/usr/bin/docker compose up -d
+ExecStop=/usr/bin/docker compose down
+TimeoutStartSec=300
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Enable and start:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now dmarc-msp
+
+# Check status
+sudo systemctl status dmarc-msp
+sudo -u dmarc-msp docker compose -C /opt/dmarc-msp ps
+```
+
+### Updating
+
+```bash
+sudo -u dmarc-msp git -C /opt/dmarc-msp pull
+sudo systemctl restart dmarc-msp
+```
 
 ## Development
 
