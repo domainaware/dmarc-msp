@@ -4,7 +4,7 @@ A Python tool and Docker-based deployment stack for Managed Service Providers (M
 
 The entire stack deploys via a single `docker compose up`: SMTP ingestion, parsedmarc processing, OpenSearch storage, dashboards, TLS certificates, and the management API/CLI.
 
-> **Note:** This project was generated with the assistance of [Claude](https://claude.ai), Anthropic's AI assistant.
+> **Note:** This project is a work in progress generated with the assistance of [Claude](https://claude.ai), Anthropic's AI assistant.
 
 ## Features
 
