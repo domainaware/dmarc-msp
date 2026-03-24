@@ -9,11 +9,6 @@ description = "DMARC monitoring automation for Managed Service Providers (and ev
 license = "Apache-2.0"
 readme = "README.md"
 requires-python = ">=3.11"
-
-[project.urls]
-Homepage = "https://github.com/domainaware/dmarc-msp"
-Issues = "https://github.com/domainaware/dmarc-msp/issues"
-Changelog = "https://github.com/domainaware/dmarc-msp/blob/main/CHANGELOG.md"
 dependencies = [
     "typer>=0.12,<1",
     "rich>=13,<14",
@@ -27,6 +22,11 @@ dependencies = [
     "opensearch-py>=2,<3",
     "cloudflare>=3,<4",
 ]
+
+[project.urls]
+Homepage = "https://github.com/domainaware/dmarc-msp"
+Issues = "https://github.com/domainaware/dmarc-msp/issues"
+Changelog = "https://github.com/domainaware/dmarc-msp/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 dev = [
