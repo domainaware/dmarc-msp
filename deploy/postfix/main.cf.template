@@ -1,6 +1,9 @@
 # Postfix main.cf — receive-only MTA for DMARC report ingestion
 # Variables substituted by envsubst at container startup.
 
+# Use modern defaults — suppresses backwards-compatibility warnings
+compatibility_level = 3.6
+
 # Identity
 smtpd_banner = $myhostname ESMTP
 myhostname = ${MSP_DOMAIN}

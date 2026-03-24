@@ -24,3 +24,4 @@ lmtp      unix  -       -       n       -       -       lmtp
 anvil     unix  -       -       n       -       1       anvil
 scache    unix  -       -       n       -       1       scache
 discard   unix  -       -       n       -       -       discard
+postlog   unix-dgram n  -       n       -       1       postlogd
