@@ -70,19 +70,15 @@ $EDITOR dmarc-msp.yaml
 $EDITOR docker-compose.yml
 ```
 
-### 2. Obtain TLS certificate
-
-```bash
-docker compose run --rm --entrypoint certbot certbot certonly \
-  --standalone -d dmarc.msp-example.com \
-  --agree-tos -m admin@msp-example.com
-```
-
-### 3. Start the stack
+### 2. Start the stack
 
 ```bash
 docker compose up -d
 ```
+
+TLS certificates are obtained automatically on first boot. The nginx container starts with a temporary self-signed certificate, certbot obtains a real Let's Encrypt certificate via HTTP-01 challenge (port 80), and nginx reloads with the valid certificate. Renewals are handled automatically every 12 hours.
+
+Make sure your domain's DNS points to the server and port 80 is open before starting.
 
 ### 4. Validate
 

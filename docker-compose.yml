@@ -64,10 +64,6 @@ services:
     container_name: parsedmarc-dashboards
     environment:
       - OPENSEARCH_HOSTS=["https://opensearch:9200"]
-    ports:
-      - "443:5601"
-    volumes:
-      - certs:/etc/letsencrypt:ro
     depends_on:
       opensearch:
         condition: service_healthy
@@ -76,25 +72,48 @@ services:
       - backend
     restart: unless-stopped
 
+  nginx:
+    build: ./deploy/nginx
+    container_name: parsedmarc-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - certs:/etc/letsencrypt
+      - certbot-webroot:/var/www/certbot:ro
+    environment:
+      - MSP_DOMAIN=${MSP_DOMAIN:-dmarc.msp-example.com}
+    depends_on:
+      - opensearch-dashboards
+    networks:
+      - frontend
+    restart: unless-stopped
+
   certbot:
     image: certbot/certbot
     container_name: parsedmarc-certbot
-    ports:
-      - "80:80"
     volumes:
       - certs:/etc/letsencrypt
       - certbot-webroot:/var/www/certbot
       - /var/run/docker.sock:/var/run/docker.sock
       - /usr/bin/docker:/usr/bin/docker:ro
+    environment:
+      - MSP_DOMAIN=${MSP_DOMAIN:-dmarc.msp-example.com}
+      - CERTBOT_EMAIL=${CERTBOT_EMAIL:-}
     entrypoint: >
       sh -c 'trap exit TERM;
+      if [ ! -f /etc/letsencrypt/live/$MSP_DOMAIN/fullchain.pem ]; then
+        echo "No certificate found — requesting initial cert";
+        certbot certonly --webroot -w /var/www/certbot -d $MSP_DOMAIN --non-interactive --agree-tos --email $CERTBOT_EMAIL;
+      fi;
       while :; do
-        certbot renew --quiet --deploy-hook "docker kill -s HUP parsedmarc-postfix && docker restart parsedmarc-opensearch parsedmarc-dashboards";
+        certbot renew --quiet --deploy-hook "docker kill -s HUP parsedmarc-nginx && docker kill -s HUP parsedmarc-postfix";
         sleep 12h & wait $${!};
       done'
+    depends_on:
+      - nginx
     networks:
       - frontend
-      - backend
     restart: unless-stopped
 
   dmarc-msp:
