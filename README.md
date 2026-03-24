@@ -256,7 +256,9 @@ sudo usermod -aG docker dmarc-msp
 # without sudo (log out and back in for this to take effect)
 sudo usermod -aG docker $USER
 
-# Clone the repo as the dmarc-msp user
+# Create the home directory and clone the repo
+sudo mkdir /opt/dmarc-msp
+sudo chown dmarc-msp:dmarc-msp /opt/dmarc-msp
 sudo -u dmarc-msp git clone https://github.com/domainaware/dmarc-msp.git /opt/dmarc-msp
 ```
 
