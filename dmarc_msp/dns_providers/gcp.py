@@ -45,6 +45,11 @@ class GCPDNSProvider(DNSProvider):
         return managed_zone
 
     def _fqdn(self, name: str, zone: str) -> str:
+        """Ensure name is a fully qualified domain name with trailing dot."""
+        if name.endswith(f".{zone}."):
+            return name
+        if name.endswith(f".{zone}"):
+            return f"{name}."
         return f"{name}.{zone}."
 
     def create_txt_record(
