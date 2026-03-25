@@ -21,18 +21,29 @@ console = Console()
 @app.command()
 def add(
     client: str = typer.Argument(..., help="Client name"),
-    domain: str = typer.Argument(..., help="Domain to add"),
+    domains: list[str] = typer.Argument(..., help="Domains to add"),
     config: str | None = typer.Option(None, "--config", "-c"),
 ):
-    """Add a domain to a client."""
+    """Add one or more domains to a client."""
     settings = get_settings(config)
     db = get_db_session(settings)
     try:
         svc = get_onboarding_service(settings, db)
-        result = svc.add_domain(client, domain)
-        console.print(f"Added [bold]{result.domain}[/bold] to {result.client_name}")
-        console.print(f"  Tenant:       {result.tenant}")
-        console.print(f"  DNS verified: {'yes' if result.dns_verified else 'pending'}")
+        failed = []
+        for domain in domains:
+            try:
+                result = svc.add_domain(client, domain)
+                console.print(
+                    f"  [green]✓[/green] {result.domain} "
+                    f"(dns={'verified' if result.dns_verified else 'pending'})"
+                )
+            except Exception as e:
+                failed.append((domain, e))
+                console.print(f"  [red]✗[/red] {domain}: {e}")
+        if failed:
+            raise typer.Exit(1)
+    except typer.Exit:
+        raise
     except Exception as e:
         console.print(f"[red]Error:[/red] {e}")
         raise typer.Exit(1)
@@ -40,21 +51,34 @@ def add(
         db.close()
 
 
+@app.command("delete", hidden=True)
 @app.command()
 def remove(
-    domain: str = typer.Argument(..., help="Domain to remove"),
+    domains: list[str] = typer.Argument(..., help="Domains to remove"),
     keep_dns: bool = typer.Option(False, "--keep-dns", help="Keep DNS records"),
     config: str | None = typer.Option(None, "--config", "-c"),
 ):
-    """Remove a domain from monitoring."""
+    """Remove one or more domains from monitoring."""
     settings = get_settings(config)
     db = get_db_session(settings)
     try:
         svc = get_onboarding_service(settings, db)
-        client_name = svc.remove_domain(domain, purge_dns=not keep_dns)
-        console.print(
-            f"Removed [bold]{domain}[/bold] from {client_name}"
-        )
+        failed = []
+        for domain in domains:
+            try:
+                client_name = svc.remove_domain(
+                    domain, purge_dns=not keep_dns
+                )
+                console.print(
+                    f"  [green]✓[/green] {domain} (from {client_name})"
+                )
+            except Exception as e:
+                failed.append((domain, e))
+                console.print(f"  [red]✗[/red] {domain}: {e}")
+        if failed:
+            raise typer.Exit(1)
+    except typer.Exit:
+        raise
     except Exception as e:
         console.print(f"[red]Error:[/red] {e}")
         raise typer.Exit(1)
@@ -87,10 +111,10 @@ def move(
 
 @app.command()
 def verify(
-    domain: str = typer.Argument(..., help="Domain to verify"),
+    domains: list[str] = typer.Argument(..., help="Domains to verify"),
     config: str | None = typer.Option(None, "--config", "-c"),
 ):
-    """Verify DNS propagation for a domain's authorization record."""
+    """Verify DNS propagation for one or more domains."""
     settings = get_settings(config)
     db = get_db_session(settings)
     try:
@@ -98,14 +122,19 @@ def verify(
         from dmarc_msp.services.dns import DNSService
 
         dns_svc = DNSService(get_dns_provider(settings), settings)
-        verified = dns_svc.verify_authorization_record(domain)
-        if verified:
-            console.print(f"[green]✓[/green] DNS record verified for {domain}")
-        else:
-            console.print(f"[yellow]✗[/yellow] DNS record not found for {domain}")
-    except Exception as e:
-        console.print(f"[red]Error:[/red] {e}")
-        raise typer.Exit(1)
+        for domain in domains:
+            try:
+                verified = dns_svc.verify_authorization_record(domain)
+                if verified:
+                    console.print(
+                        f"  [green]✓[/green] {domain}"
+                    )
+                else:
+                    console.print(
+                        f"  [yellow]✗[/yellow] {domain} (not found)"
+                    )
+            except Exception as e:
+                console.print(f"  [red]✗[/red] {domain}: {e}")
     finally:
         db.close()
 
@@ -172,6 +201,7 @@ def bulk_add(
         db.close()
 
 
+@app.command("bulk-delete", hidden=True)
 @app.command("bulk-remove")
 def bulk_remove(
     file: str = typer.Argument(..., help="File with one domain per line"),

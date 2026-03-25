@@ -170,19 +170,18 @@ dmarcmsp client offboard "Acme Corp" --purge-indices   # also delete data
 ### Domain management
 
 ```bash
-# Add domains
-dmarcmsp domain add "Acme Corp" acme.com
-dmarcmsp domain add "Acme Corp" acme.net
+# Add domains (one or more at a time)
+dmarcmsp domain add "Acme Corp" acme.com acme.net acme.org
 
-# Remove a domain
+# Remove domains
 dmarcmsp domain remove acme.net
-dmarcmsp domain remove acme.net --keep-dns
+dmarcmsp domain remove acme.net acme.org --keep-dns
 
 # Move a domain to another client
 dmarcmsp domain move acme.net "Other Corp"
 
 # Verify DNS propagation
-dmarcmsp domain verify acme.com
+dmarcmsp domain verify acme.com acme.net
 
 # List domains
 dmarcmsp domain list
