@@ -23,6 +23,15 @@ The entire stack deploys via a single `docker compose up`: SMTP ingestion, parse
 - **Automatic TLS** — nginx reverse proxy with automatic Let's Encrypt certificate provisioning via HTTP-01 challenge. No manual certificate management required.
 - **Full Docker Compose stack** — custom Postfix (receive-only SMTP), parsedmarc, OpenSearch, Dashboards, nginx (TLS termination), certbot, and the management tool.
 
+## How It Works
+
+1. **One email address** (`reports@dmarc.msp-example.com`) receives all DMARC reports for all clients via a custom receive-only Postfix container.
+2. **parsedmarc** processes the reports and routes them to per-client OpenSearch indices using a YAML domain-to-index-prefix mapping file.
+3. **OpenSearch** stores the parsed reports. Each client is isolated via tenants, roles, and index prefixes.
+4. **OpenSearch Dashboards** provides per-client views behind an nginx reverse proxy. Clients log in and see only their own tenant's data.
+5. **nginx** terminates TLS with Let's Encrypt certificates and proxies to Dashboards. Login endpoints are rate-limited to mitigate brute-force attacks.
+6. **dmarc-msp** manages the lifecycle: DNS records, YAML mappings, OpenSearch provisioning, dashboard imports, and retention policies.
+
 ## Quick Start
 
 ### System Requirements
@@ -205,15 +214,6 @@ curl localhost:8000/api/v1/clients
 ```
 
 API docs are available at `http://localhost:8000/docs` (Swagger UI).
-
-## How It Works
-
-1. **One email address** (`reports@dmarc.msp-example.com`) receives all DMARC reports for all clients via a custom receive-only Postfix container.
-2. **parsedmarc** processes the reports and routes them to per-client OpenSearch indices using a YAML domain-to-index-prefix mapping file.
-3. **OpenSearch** stores the parsed reports. Each client is isolated via tenants, roles, and index prefixes.
-4. **OpenSearch Dashboards** provides per-client views behind an nginx reverse proxy. Clients log in and see only their own tenant's data.
-5. **nginx** terminates TLS with Let's Encrypt certificates and proxies to Dashboards. Login endpoints are rate-limited to mitigate brute-force attacks.
-6. **dmarc-msp** manages the lifecycle: DNS records, YAML mappings, OpenSearch provisioning, dashboard imports, and retention policies.
 
 ### DNS Authorization (RFC 7489)
 
