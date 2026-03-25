@@ -21,6 +21,7 @@
         "gdns",
         "healthcheck",
         "helo",
+        "histfile",
         "httpx",
         "kibanaserver",
         "letsencrypt",
