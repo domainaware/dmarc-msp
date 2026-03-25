@@ -14,12 +14,14 @@ The entire stack deploys via a single `docker compose up`: SMTP ingestion, parse
 - **OpenSearch multi-tenancy** — each client gets a scoped tenant, role, and index prefix. Clients see only their own data in Dashboards.
 - **Dashboard provisioning** — automatically rewrites and imports parsedmarc's bundled dashboards into each client's tenant with the correct index prefix.
 - **Index retention policies** — manages ISM policies for automatic index cleanup. Supports a global default and per-client overrides (e.g., 2 years for healthcare clients).
+- **Email retention** — automatic cleanup of processed DMARC report emails from Maildir, configured in `dmarc-msp.yaml`.
 - **Bulk operations** — import, remove, or move domains in bulk from a text file.
 - **Domain moves** — move a domain between clients without touching DNS. Only the YAML mapping and database are updated.
 - **CLI-first, server-optional** — the CLI calls the service layer directly by default. Optionally run as a FastAPI management API.
 - **Idempotent operations** — running the same onboarding command twice is safe.
 - **Audit trail** — every action is logged in an audit table with timestamps and details.
-- **Full Docker Compose stack** — Postfix (SMTP), parsedmarc, OpenSearch, Dashboards, certbot (TLS), cron (email cleanup), and the management tool.
+- **Automatic TLS** — nginx reverse proxy with automatic Let's Encrypt certificate provisioning via HTTP-01 challenge. No manual certificate management required.
+- **Full Docker Compose stack** — custom Postfix (receive-only SMTP), parsedmarc, OpenSearch, Dashboards, nginx (TLS termination), certbot, and the management tool.
 
 ## Quick Start
 
@@ -40,6 +42,7 @@ The entire stack deploys via a single `docker compose up`: SMTP ingestion, parse
 - Docker and Docker Compose
 - A domain for receiving DMARC reports (e.g., `dmarc.msp-example.com`)
 - DNS provider API credentials (Cloudflare, Route 53, GCP, or Azure)
+- Port 80 open (for Let's Encrypt HTTP-01 challenge)
 
 ### 1. Clone and configure
 
@@ -53,7 +56,7 @@ cp parsedmarc.example.ini parsedmarc.ini
 cp dmarc-msp.example.yaml dmarc-msp.yaml
 chmod 600 .env parsedmarc.ini
 
-# Set your MSP domain, OpenSearch password, and DNS provider credentials
+# Set your MSP domain, certbot email, OpenSearch password, and DNS provider credentials
 # (see DNS Providers section for which env vars your provider needs)
 $EDITOR .env
 
@@ -76,11 +79,11 @@ $EDITOR docker-compose.yml
 docker compose up -d
 ```
 
-TLS certificates are obtained automatically on first boot. The nginx container starts with a temporary self-signed certificate, certbot obtains a real Let's Encrypt certificate via HTTP-01 challenge (port 80), and nginx reloads with the valid certificate. Renewals are handled automatically every 12 hours.
+TLS certificates are obtained automatically on first boot. The nginx container starts HTTP-only, certbot obtains a Let's Encrypt certificate via HTTP-01 challenge (port 80), and nginx automatically reloads with the full HTTPS config. Renewals are handled automatically every 12 hours. Postfix waits for certificates before starting to ensure STARTTLS is available from the start.
 
 Make sure your domain's DNS points to the server and port 80 is open before starting.
 
-### 4. Validate
+### 3. Validate
 
 ```bash
 docker compose exec dmarc-msp dmarcmsp config-validate
@@ -109,7 +112,7 @@ To persist, run `funcsave dmarcmsp` or add the alias to `~/.config/fish/config.f
 ### Client management
 
 ```bash
-# Create a client
+# Create a client (also provisions OpenSearch tenant, role, and dashboards)
 dmarcmsp client create "Acme Corp" --contact acme@example.com
 
 # Create with custom retention (e.g., 2 years for compliance)
@@ -175,10 +178,14 @@ dmarcmsp tenant provision --client "Acme Corp"
 dmarcmsp tenant deprovision --client "Acme Corp"
 
 # Re-import dashboards (e.g., after a parsedmarc update)
-dmarcmsp dashboard import --client "Acme Corp"
+dmarcmsp dashboards import --client "Acme Corp"
 
 # Reload parsedmarc config
 dmarcmsp parsedmarc reload
+
+# Retention management
+dmarcmsp retention cleanup-emails             # delete old emails per config
+dmarcmsp retention ensure-default-policy       # create/update default ISM policy
 ```
 
 ### Management API
@@ -201,11 +208,12 @@ API docs are available at `http://localhost:8000/docs` (Swagger UI).
 
 ## How It Works
 
-1. **One email address** (`reports@dmarc.msp-example.com`) receives all DMARC reports for all clients via Postfix.
+1. **One email address** (`reports@dmarc.msp-example.com`) receives all DMARC reports for all clients via a custom receive-only Postfix container.
 2. **parsedmarc** processes the reports and routes them to per-client OpenSearch indices using a YAML domain-to-index-prefix mapping file.
 3. **OpenSearch** stores the parsed reports. Each client is isolated via tenants, roles, and index prefixes.
-4. **OpenSearch Dashboards** provides per-client views. Clients log in and see only their own tenant's data.
-5. **dmarc-msp** manages the lifecycle: DNS records, YAML mappings, OpenSearch provisioning, dashboard imports, and retention policies.
+4. **OpenSearch Dashboards** provides per-client views behind an nginx reverse proxy. Clients log in and see only their own tenant's data.
+5. **nginx** terminates TLS with Let's Encrypt certificates and proxies to Dashboards. Login endpoints are rate-limited to mitigate brute-force attacks.
+6. **dmarc-msp** manages the lifecycle: DNS records, YAML mappings, OpenSearch provisioning, dashboard imports, and retention policies.
 
 ### DNS Authorization (RFC 7489)
 
@@ -255,14 +263,14 @@ sudo chown dmarc-msp:dmarc-msp /opt/dmarc-msp
 sudo -u dmarc-msp git clone https://github.com/domainaware/dmarc-msp.git /opt/dmarc-msp
 ```
 
-Then follow the [Quick Start](#quick-start) configuration steps (copy templates, set passwords, create secrets) inside `/opt/dmarc-msp`, running commands with `sudo -u dmarc-msp`:
+Then follow the [Quick Start](#quick-start) configuration steps (copy templates, set passwords, configure provider) inside `/opt/dmarc-msp`, running commands with `sudo -u dmarc-msp`:
 
 ```bash
 cd /opt/dmarc-msp
 sudo -u dmarc-msp cp .env.example .env
 sudo -u dmarc-msp cp parsedmarc.example.ini parsedmarc.ini
 sudo -u dmarc-msp cp dmarc-msp.example.yaml dmarc-msp.yaml
-# ... edit files, create secrets, etc.
+# ... edit files, etc.
 ```
 
 ### systemd service
@@ -317,7 +325,7 @@ uv pip install -e ".[dev]"
 # Run tests
 pytest
 
-# Use dev compose (no TLS, security disabled)
+# Use dev compose (no TLS, no nginx, security disabled)
 docker compose -f docker-compose.yml -f docker-compose.dev.yml up
 ```
 
@@ -332,17 +340,23 @@ dmarc-msp/
 │   ├── models.py              # Pydantic models
 │   ├── db.py                  # SQLAlchemy + SQLite
 │   ├── services/              # Core business logic
-│   │   ├── clients.py         # Client CRUD
+│   │   ├── clients.py         # Client CRUD + rename
 │   │   ├── dns.py             # DNS record lifecycle
 │   │   ├── opensearch.py      # Tenant/role provisioning
 │   │   ├── dashboards.py      # Saved object rewrite + import
 │   │   ├── parsedmarc.py      # YAML mapping management
-│   │   ├── retention.py       # ISM policy management
+│   │   ├── retention.py       # ISM + email retention
 │   │   ├── onboarding.py      # Onboarding orchestrator
 │   │   └── offboarding.py     # Offboarding orchestrator
 │   ├── dns_providers/         # Pluggable DNS backends
 │   ├── cli/                   # Typer CLI
 │   └── api/                   # FastAPI management API
+├── deploy/
+│   ├── postfix/               # Custom receive-only Postfix container
+│   ├── nginx/                 # TLS-terminating reverse proxy
+│   ├── certbot/               # Certbot defaults
+│   ├── opensearch/            # OpenSearch node config
+│   └── dashboards/            # Dashboards config
 ├── docker-compose.yml         # Full production stack
 ├── docker-compose.dev.yml     # Dev overrides
 └── tests/
@@ -357,60 +371,55 @@ The stack uses two Docker networks to separate public-facing services from inter
 ```text
                     Internet
                        │
-┌──────────────────────────────────────────────────────────┐
-│                  Docker Compose                          │
-│                                                          │
-│  ╔═══════════ frontend network ═══════════════════════╗  │
-│  ║                                                    ║  │
-│  ║  ┌────────────┐  ┌──────────────┐                  ║  │
-│  ║  │ Postfix    │  │ Dashboards   │                  ║  │
-│  ║  │ :25/:587   │  │ :443         │                  ║  │
-│  ║  └────────────┘  └──────────────┘                  ║  │
-│  ║                                                    ║  │
-│  ║  ┌────────────┐  ┌──────────────┐                  ║  │
-│  ║  │ certbot    │  │ dmarc-msp    │                  ║  │
-│  ║  │ →LE API    │  │ →DNS APIs    │                  ║  │
-│  ║  └────────────┘  │ :8000(lo)    │                  ║  │
-│  ║                  └──────────────┘                  ║  │
-│  ║                                                    ║  │
-│  ║  ┌────────────────┐                                ║  │
-│  ║  │ parsedmarc     │                                ║  │
-│  ║  │ →reverse DNS   │                                ║  │
-│  ║  └────────────────┘                                ║  │
-│  ║                                                    ║  │
-│  ╚══╤══╤══╤══╤══╤══╤══════════════════════════════════╝  │
-│     │  │  │  │  │  │                                     │
-│  ╔══╧══╧══╧══╧══╧══╧══════════════════════════════════╗  │
-│  ║  backend network (internal: true)                  ║  │
-│  ║                                                    ║  │
-│  ║  ┌────────────────────────────┐                    ║  │
-│  ║  │ OpenSearch (no host port)  │                    ║  │
-│  ║  └────────────────────────────┘                    ║  │
-│  ║                                                    ║  │
-│  ║  ┌──────────┐  ┌──────────┐                        ║  │
-│  ║  │ cron     │  │ Maildir  │                        ║  │
-│  ║  └──────────┘  └──────────┘                        ║  │
-│  ║                                                    ║  │
-│  ╚════════════════════════════════════════════════════╝  │
-│                                                          │
+┌──────────────────────┼───────────────────────────────────┐
+│                Docker Compose                            │
+│                      │                                   │
+│  ╔═══════════ frontend network ════════════════════════╗ │
+│  ║       ┌───────────┼──────────────┐                  ║ │
+│  ║       │    :80    │   :443       │                  ║ │
+│  ║       │   ┌───────┴──────────┐   │                  ║ │
+│  ║       │   │      nginx       │   │                  ║ │
+│  ║       │   │  (TLS + proxy)   │  │                  ║ │
+│  ║       │   └────────┬─────────┘  │                  ║ │
+│  ║       │            │            │                  ║ │
+│  ║  :25/:587          │            │                  ║ │
+│  ║  ┌────────┐  ┌─────┴──────┐  ┌──┴───────┐          ║ │
+│  ║  │Postfix │  │ Dashboards │  │ certbot  │          ║ │
+│  ║  └────────┘  └────────────┘  └──────────┘          ║ │
+│  ║                                                    ║ │
+│  ║  ┌────────────┐  ┌──────────────┐                  ║ │
+│  ║  │ parsedmarc │  │  dmarc-msp   │                  ║ │
+│  ║  │ →rev DNS   │  │  →DNS APIs   │                  ║ │
+│  ║  └────────────┘  │  :8000(lo)   │                  ║ │
+│  ║                  └──────────────┘                  ║ │
+│  ╚══╤══════════════════════════════════════════════════╝ │
+│     │                                                    │
+│  ╔══╧══════════════════════════════════════════════════╗ │
+│  ║  backend network (internal: true)                  ║ │
+│  ║                                                    ║ │
+│  ║  ┌────────────────────────────┐                    ║ │
+│  ║  │ OpenSearch (no host port)  │                    ║ │
+│  ║  └────────────────────────────┘                    ║ │
+│  ╚════════════════════════════════════════════════════╝ │
 └──────────────────────────────────────────────────────────┘
 ```
 
 - **`frontend`** — services that need external connectivity (inbound or outbound).
 - **`backend`** — internal-only (`internal: true`). No service on this network can reach the internet. OpenSearch lives here exclusively.
 
-Services that bridge both networks: Postfix, Dashboards, parsedmarc, dmarc-msp, certbot.
+Services that bridge both networks: Dashboards, parsedmarc, dmarc-msp.
 
 ### Externally Reachable Ports
 
-| Port       | Service    | Purpose                              |
-|------------|------------|--------------------------------------|
-| `:25`      | Postfix    | SMTP from DMARC report senders       |
-| `:587`     | Postfix    | SMTP submission (STARTTLS)           |
-| `:443`     | Dashboards | HTTPS for client browser access      |
-| `lo:8000`  | dmarc-msp  | Management API (localhost only)      |
+| Port       | Service    | Purpose                                |
+|------------|------------|----------------------------------------|
+| `:80`      | nginx      | HTTP → HTTPS redirect + ACME challenges|
+| `:443`     | nginx      | HTTPS reverse proxy to Dashboards      |
+| `:25`      | Postfix    | SMTP from DMARC report senders         |
+| `:587`     | Postfix    | SMTP submission (STARTTLS)             |
+| `lo:8000`  | dmarc-msp  | Management API (localhost only)        |
 
-OpenSearch `:9200` is exposed only internally — no host port binding.
+OpenSearch `:9200` and Dashboards `:5601` are internal only — no host port binding.
 
 ### Outbound Connections
 
@@ -424,18 +433,16 @@ OpenSearch `:9200` is exposed only internally — no host port binding.
 
 ### Secrets Management
 
-Secrets are managed via two mechanisms — no external secrets manager required:
-
-1. **`.env` file** — for values Docker Compose interpolates into service definitions (e.g., `OPENSEARCH_ADMIN_PASSWORD`). Gitignored, created during setup.
-2. **Docker Compose `secrets`** — for values mounted as files at `/run/secrets/<name>`. These don't appear in `docker inspect`, process listings, or environment dumps.
+Secrets are managed via environment variables in `.env` — no external secrets manager required. GCP is the only provider that uses a Docker secret file (`secrets/gcp_sa_key.json`).
 
 The application resolves secrets in priority order: environment variable > Docker secret file > config YAML value.
 
 **Files that must never be committed** (enforced via `.gitignore`):
 
-- `.env` — Docker Compose environment variables
-- `secrets/` — Docker secret files (API tokens, credentials)
+- `.env` — Docker Compose environment variables (passwords, API tokens)
+- `secrets/` — Docker secret files (GCP key)
 - `parsedmarc.ini` — contains the OpenSearch password
+- `dmarc-msp.yaml` — local config
 - `domain_map.yaml` — auto-managed, contains client domain mappings
 - `*.db` — SQLite database (client list, audit trail)
 
@@ -445,21 +452,22 @@ The application resolves secrets in priority order: environment variable > Docke
 
 | Surface | Risk | Mitigation |
 | -- | -- | -- |
-| **Postfix SMTP** (`:25/:587`) | Spam, malformed reports, resource exhaustion | Postfix accepts mail only for the configured reporting address. Message size is capped at 10 MB. parsedmarc validates report format before processing. STARTTLS is enabled via certbot-managed certificates. |
-| **OpenSearch Dashboards** (`:443`) | Unauthorized data access, credential brute-force | Clients authenticate via OpenSearch Security. Each client's role is scoped to their own tenant and index prefix — they cannot access other clients' data. The `kibanaserver` service account proxies requests internally. |
+| **Postfix SMTP** (`:25/:587`) | Spam, malformed reports, resource exhaustion | Custom receive-only Postfix that accepts mail only for the configured reporting address. All other recipients are rejected. Message size is capped at 10 MB. No relay. STARTTLS enabled via certbot-managed certificates. |
+| **nginx** (`:80/:443`) | Unauthorized data access, credential brute-force | TLS termination with Let's Encrypt. Proxies to OpenSearch Dashboards. Login endpoint is rate-limited (5 requests/minute per IP). Port 80 only serves ACME challenges and redirects to HTTPS. |
 
 #### What's exposed to the local host only
 
 | Surface | Risk | Mitigation |
 | -- | -- | -- |
 | **Management API** (`127.0.0.1:8000`) | Unauthorized admin operations | Binds to localhost only — not reachable from the network. An IP allowlist middleware provides a second layer. No token auth in v1; access control relies on network-level restrictions. |
-| **Docker socket** (`/var/run/docker.sock`) | Container escape, host compromise | Mounted into the dmarc-msp container for sending SIGHUP to parsedmarc. Only the dmarc-msp container has access. This is a privileged surface — restrict host access to the Docker socket accordingly. |
+| **Docker socket** (`/var/run/docker.sock`) | Container escape, host compromise | Mounted into the dmarc-msp and certbot containers. dmarc-msp uses it for sending SIGHUP to parsedmarc; certbot uses it for reloading nginx and Postfix after cert renewal. Restrict host access to the Docker socket accordingly. |
 
 #### What's internal only (no internet, no host ports)
 
 | Surface | Risk | Mitigation |
 | -- | -- | -- |
 | **OpenSearch** (`:9200`) | Full cluster access if compromised | Lives exclusively on the `backend` network (`internal: true`). No host port binding, no outbound internet. Only reachable by sibling containers. Admin password never leaves the Docker network. |
+| **OpenSearch Dashboards** (`:5601`) | Data access if network bypassed | No host port. Only accessible via nginx reverse proxy. Serves plain HTTP internally; TLS is terminated at nginx. |
 | **SQLite database** | Client list and audit trail disclosure | Stored on a Docker volume (`msp-data`). Contains client names, domains, and audit logs — no credentials. Access requires host filesystem or container access. |
 
 ### Client Isolation Model
@@ -478,11 +486,11 @@ Clients authenticate to Dashboards, not to OpenSearch directly. The `kibanaserve
 
 ### Hardening Recommendations
 
-- **Restrict Docker socket access** on the host. Consider using a Docker socket proxy like [Tecnativa/docker-socket-proxy](https://github.com/Tecnativa/docker-socket-proxy) to limit the dmarc-msp container to only the `containers/kill` endpoint.
+- **Use a strong OpenSearch admin password** — `openssl rand -base64 32` is recommended. The `admin` username is hardcoded by OpenSearch and cannot be changed.
+- **Restrict Docker socket access** on the host. Consider using a Docker socket proxy like [Tecnativa/docker-socket-proxy](https://github.com/Tecnativa/docker-socket-proxy) to limit containers to only the endpoints they need.
 - **Set file permissions** during setup: `chmod 600 .env parsedmarc.ini` and `chmod 700 secrets/`.
-- **Enable a firewall** — only ports 25, 587, and 443 need to be open to the internet. Port 8000 should never be exposed beyond localhost.
-- **Rotate secrets** by updating `.env`, the matching secret file, and `parsedmarc.ini`, then restarting affected services. No code changes required.
-- **Use a reverse proxy** (e.g., nginx, Caddy) in front of Dashboards for additional access controls, rate limiting, or IP restrictions.
+- **Enable a firewall** — only ports 25, 80, 443, and 587 need to be open to the internet. Port 8000 should never be exposed beyond localhost.
+- **Rotate secrets** by updating `.env` and `parsedmarc.ini`, then restarting affected services. No code changes required.
 - **Monitor the audit log** — every onboarding, offboarding, and provisioning action is recorded with timestamps in the `audit_log` table.
 - **Keep images updated** — pin OpenSearch and parsedmarc to specific versions in `docker-compose.yml` and update deliberately.
 
