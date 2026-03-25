@@ -118,6 +118,26 @@ alias dmarcmsp 'docker compose exec dmarc-msp dmarcmsp'
 
 To persist, run `funcsave dmarcmsp` or add the alias to `~/.config/fish/config.fish`.
 
+### Shell completions
+
+Tab-completion for subcommands, options, and arguments is available via Typer. Once installed, you can type `dmarcmsp client <TAB>` to see available subcommands like `create`, `list`, `show`, etc.
+
+**Install:**
+
+```bash
+dmarcmsp --install-completion
+```
+
+This auto-detects your shell and adds the completion script. Restart your shell or source your profile for it to take effect.
+
+**Uninstall:**
+
+```bash
+dmarcmsp --show-completion   # print the completion script (to find where it was installed)
+```
+
+Remove the completion script from your shell profile to uninstall.
+
 ### Client management
 
 ```bash
