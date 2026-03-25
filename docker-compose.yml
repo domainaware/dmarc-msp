@@ -86,8 +86,6 @@ services:
       - certbot-webroot:/var/www/certbot:ro
     environment:
       - MSP_DOMAIN=${MSP_DOMAIN:-dmarc.msp-example.com}
-    depends_on:
-      - opensearch-dashboards
     networks:
       - frontend
     restart: unless-stopped
