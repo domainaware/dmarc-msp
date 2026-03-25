@@ -421,6 +421,17 @@ pytest
 docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 ```
 
+### Resetting data
+
+To start with an empty database and empty OpenSearch (e.g., after testing changes), stop the stack and remove the data volumes:
+
+```bash
+docker compose down -v
+docker compose up --build -d
+```
+
+The `-v` flag removes named volumes, which deletes all OpenSearch indices, the SQLite database, and the Maildir. The stack recreates them empty on startup. Configuration files (`.env`, `parsedmarc.ini`, `dmarc-msp.yaml`) are bind-mounted and are not affected.
+
 ## Architecture
 
 ### Code Structure
