@@ -20,6 +20,7 @@ services:
   parsedmarc:
     image: ghcr.io/domainaware/parsedmarc:latest
     container_name: parsedmarc
+    command: ["-c", "/etc/parsedmarc.ini"]
     volumes:
       - maildir:/var/mail/dmarc
       - ./parsedmarc.ini:/etc/parsedmarc.ini:ro
