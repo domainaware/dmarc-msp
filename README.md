@@ -357,12 +357,13 @@ cd /opt/dmarc-msp
 sudo -u dmarc-msp cp .env.example .env
 sudo -u dmarc-msp cp parsedmarc.example.ini parsedmarc.ini
 sudo -u dmarc-msp cp dmarc-msp.example.yaml dmarc-msp.yaml
-chmod 600 .env parsedmarc.ini dmarc-msp.yaml 
-chmod 700 secrets/
-chmod 600 secrets/*
+sudo -u dmarc-msp chmod 600 .env parsedmarc.ini dmarc-msp.yaml 
+sudo -u dmarc-msp chmod 700 secrets/
+# After you have added any file under secrets, run
+sudo -u dmarc-msp find secrets/ -type f -exec chmod 600 {} +
+# Edit each configuration file
+sudo -u dmarc-msp $EDITOR .env
 ```
-
-Edit each configuration file to match your needs.
 
 ### systemd service
 
