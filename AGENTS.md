@@ -130,6 +130,10 @@ uv pip install -e ".[dev]"
 pytest
 ```
 
+## Diagrams
+
+When creating ASCII/Unicode box-drawing diagrams, never hand-draw them. Instead, write a Python script that generates the diagram programmatically and asserts every line is the same character width before outputting. Use helper functions for box creation, side-by-side layout, and nesting. Verify the output renders correctly before presenting.
+
 ## Common Tasks
 
 ### Adding a new DNS provider
