@@ -48,10 +48,15 @@ http {
 
         add_header Strict-Transport-Security "max-age=63072000; includeSubDomains" always;
 
+        # Resolve upstreams at request time via Docker's embedded DNS so
+        # nginx can reload before opensearch-dashboards is running.
+        resolver 127.0.0.11 valid=30s;
+        set $dashboards http://opensearch-dashboards:5601;
+
         # Rate-limit the login endpoint to mitigate brute-force attacks
         location /auth/login {
             limit_req zone=login burst=3 nodelay;
-            proxy_pass http://opensearch-dashboards:5601;
+            proxy_pass $dashboards;
             proxy_http_version 1.1;
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
@@ -60,7 +65,7 @@ http {
         }
 
         location / {
-            proxy_pass http://opensearch-dashboards:5601;
+            proxy_pass $dashboards;
 
             proxy_http_version 1.1;
             proxy_set_header Upgrade $http_upgrade;
