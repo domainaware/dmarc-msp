@@ -357,8 +357,12 @@ cd /opt/dmarc-msp
 sudo -u dmarc-msp cp .env.example .env
 sudo -u dmarc-msp cp parsedmarc.example.ini parsedmarc.ini
 sudo -u dmarc-msp cp dmarc-msp.example.yaml dmarc-msp.yaml
-# ... edit files, etc.
+chmod 600 .env parsedmarc.ini dmarc-msp.yaml 
+chmod 700 secrets/
+chmod 600 secrets/*
 ```
+
+Edit each configuration file to match your needs.
 
 ### systemd service
 
@@ -578,9 +582,8 @@ Clients authenticate to Dashboards, not to OpenSearch directly. The `kibanaserve
 
 ### Hardening Recommendations
 
-- **Use a strong OpenSearch admin password** — `openssl rand -base64 32` is recommended. The `admin` username is hardcoded by OpenSearch and cannot be changed.
+- **Use a strong OpenSearch admin password** — OpenSearch requires uppercase, lowercase, digits, and at least one special character. A quick way to generate one is to run: `tr -dc 'A-Za-z0-9@#$%&*+=' < /dev/urandom | head -c 32 && echo`. The `admin` username is hardcoded by OpenSearch and cannot be changed.
 - **Restrict Docker socket access** on the host. Consider using a Docker socket proxy like [Tecnativa/docker-socket-proxy](https://github.com/Tecnativa/docker-socket-proxy) to limit containers to only the endpoints they need.
-- **Set file permissions** during setup: `chmod 600 .env parsedmarc.ini` and `chmod 700 secrets/`.
 - **Enable a firewall** — only ports 25, 80, 443, and 587 need to be open to the internet. Port 8000 should never be exposed beyond localhost.
 - **Rotate secrets** by updating `.env` and `parsedmarc.ini`, then restarting affected services. No code changes required.
 - **Monitor the audit log** — every onboarding, offboarding, and provisioning action is recorded with timestamps in the `audit_log` table.
