@@ -369,30 +369,44 @@ The service layer contains all business logic. The CLI and API are thin wrappers
 The stack uses two Docker networks to separate public-facing services from internal infrastructure:
 
 ```text
-Exposed ports: :25/:587 (Postfix), :80/:443 (nginx), localhost:8000 (dmarc-msp)
+Internet
+   │
 
-┌─────────────────────────────────────────────────────────┐
-│ frontend network                                        │
-│                                                         │
-│  ┌─────────┐  ┌───────────┐  ┌──────────┐  ┌─────────┐  │
-│  │ nginx   │  │  Postfix  │  │ certbot  │  │dmarc-msp│  │
-│  │ :80/:443│  │ :25/:587  │  │          │  │ :8000   │  │
-│  └────┬────┘  └───────────┘  └──────────┘  └─────────┘  │
-│       │                                                 │
-│  ┌────┴────────┐  ┌────────────┐                        │
-│  │ Dashboards  │  │ parsedmarc │                        │
-│  │ :5601       │  │            │                        │
-│  └─────────────┘  └────────────┘                        │
-│       │                │             │           │      │
-├───────┼────────────────┼─────────────┼───────────┼──────┤
-│       │                │             │           │      │
-│ backend network (internal: true)                        │
-│                                                         │
-│  ┌──────────────────────────┐                           │
-│  │ OpenSearch :9200         │                           │
-│  │ (no host port)           │                           │
-│  └──────────────────────────┘                           │
-└─────────────────────────────────────────────────────────┘
+╔═ frontend network ═══════════════════════════════════════════════════════╗
+║ ┌─────────────────┐ ┌──────────────┐ ┌──────────────┐ ┌────────────────┐ ║
+║ │ nginx           │ │ Postfix      │ │ certbot      │ │ dmarc-msp      │ ║
+║ │ :80 :443        │ │ :25 :587     │ │              │ │ localhost:8000 │ ║
+║ │ TLS termination │ │ receive-only │ │ HTTP-01      │ │ CLI + API      │ ║
+║ │ rate limiting   │ │ STARTTLS     │ │ auto-renewal │ │ ->DNS APIs     │ ║
+║ └─────────────────┘ └──────────────┘ └──────────────┘ └────────────────┘ ║
+║          │                                                               ║
+║ ┌──────────────────┐ ┌───────────────┐ ┌──────────────┐                  ║
+║ │ Dashboards       │ │ parsedmarc    │ │ Maildir      │                  ║
+║ │ :5601 (internal) │ │               │ │ (shared vol) │                  ║
+║ │ <-nginx proxy    │ │ ->reverse DNS │ └──────────────┘                  ║
+║ └──────────────────┘ │ ->Maildir     │                                   ║
+║                      └───────────────┘                                   ║
+║                                                                          ║
+╚══╤══════════╤══════════╤═════════════════════════════════════════════════╝
+   │          │          │
+   │  Dashboards, parsedmarc, dmarc-msp
+   │  bridge both networks
+   │          │          │
+╔══╧══════════╧══════════╧═ backend network (internal: true) ══════════════╗
+║                                                                          ║
+║   ┌────────────────────┐                                                 ║
+║   │ OpenSearch :9200   │                                                 ║
+║   │ (no host port)     │                                                 ║
+║   │ backend only       │                                                 ║
+║   └────────────────────┘                                                 ║
+║                                                                          ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+Data flow:
+  Report senders ->:25-> Postfix -> Maildir -> parsedmarc -> OpenSearch
+  Clients ->:443-> nginx -> Dashboards -> OpenSearch
+  Admin ->:8000-> dmarc-msp -> OpenSearch, DNS APIs, Docker
+  certbot ->:80-> Let's Encrypt (ACME HTTP-01)
 ```
 
 - **`frontend`** — services that need external connectivity (inbound or outbound).
