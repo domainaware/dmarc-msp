@@ -61,9 +61,8 @@ cd dmarc-msp
 
 # Copy templates
 cp .env.example .env
-cp parsedmarc.example.ini parsedmarc.ini
 cp dmarc-msp.example.yaml dmarc-msp.yaml
-chmod 600 .env parsedmarc.ini
+chmod 600 .env
 
 # Set your MSP domain, certbot email, OpenSearch password, and DNS provider credentials
 # (see DNS Providers section for which env vars your provider needs)

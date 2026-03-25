@@ -20,11 +20,23 @@ services:
   parsedmarc:
     image: ghcr.io/domainaware/parsedmarc:latest
     container_name: parsedmarc
-    command: ["-c", "/etc/parsedmarc.ini"]
     volumes:
       - maildir:/var/mail/dmarc
-      - ./parsedmarc.ini:/etc/parsedmarc.ini:ro
       - ./domain_map.yaml:/etc/parsedmarc_domain_map.yaml:ro
+    environment:
+      - PARSEDMARC_GENERAL_SAVE_AGGREGATE=true
+      - PARSEDMARC_GENERAL_SAVE_FORENSIC=true
+      - PARSEDMARC_GENERAL_SAVE_SMTP_TLS=true
+      - PARSEDMARC_GENERAL_INDEX_PREFIX_DOMAIN_MAP=/etc/parsedmarc_domain_map.yaml
+      - PARSEDMARC_MAILDIR_MAILDIR_PATH=/var/mail/dmarc
+      - PARSEDMARC_MAILDIR_CREATE=false
+      - PARSEDMARC_MAILBOX_WATCH=true
+      - PARSEDMARC_MAILBOX_DELETE=false
+      - PARSEDMARC_OPENSEARCH_HOSTS=https://opensearch:9200
+      - PARSEDMARC_OPENSEARCH_USERNAME=admin
+      - PARSEDMARC_OPENSEARCH_PASSWORD=${OPENSEARCH_ADMIN_PASSWORD}
+      - PARSEDMARC_OPENSEARCH_SSL=true
+      - PARSEDMARC_OPENSEARCH_SKIP_CERTIFICATE_VERIFICATION=true
     depends_on:
       opensearch:
         condition: service_healthy
