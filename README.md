@@ -244,35 +244,35 @@ mkdir -p deploy/dashboards/branding
 # Add your files: logo.svg, mark.svg, loading-logo.svg, favicon.svg
 ```
 
-### 2. Mount the assets
+### 2. Mount the assets into the Dashboards assets directory
 
-Add a volume mount to the `opensearch-dashboards` service in `docker-compose.yml`:
+OpenSearch Dashboards serves local images through its built-in web server at the `ui/assets/` URL path. Mount your branding files into the container's assets directory so Dashboards can serve them:
 
 ```yaml
 opensearch-dashboards:
   volumes:
-    - ./deploy/dashboards/branding/:/usr/share/opensearch-dashboards/custom-branding/:ro
+    - ./deploy/dashboards/branding/:/usr/share/opensearch-dashboards/src/core/server/core_app/assets/branding/:ro
 ```
-
-This creates a new directory inside the container — it does not shadow any existing assets.
 
 ### 3. Configure branding
 
-Add the following to `deploy/dashboards/opensearch_dashboards.yml`:
+Add the following to `deploy/dashboards/opensearch_dashboards.yml`. The URLs must be HTTP URLs served by Dashboards:
 
 ```yaml
 opensearchDashboards.branding:
   logo:
-    defaultUrl: "/usr/share/opensearch-dashboards/custom-branding/logo.svg"
-    darkModeUrl: "/usr/share/opensearch-dashboards/custom-branding/logo-dark.svg"
+    defaultUrl: "https://<dashboards-hostname>/ui/assets/branding/logo.svg"
+    darkModeUrl: "https://<dashboards-hostname>/ui/assets/branding/logo-dark.svg"
   mark:
-    defaultUrl: "/usr/share/opensearch-dashboards/custom-branding/mark.svg"
-    darkModeUrl: "/usr/share/opensearch-dashboards/custom-branding/mark-dark.svg"
+    defaultUrl: "https://<dashboards-hostname>/ui/assets/branding/mark.svg"
+    darkModeUrl: "https://<dashboards-hostname>/ui/assets/branding/mark-dark.svg"
   loadingLogo:
-    defaultUrl: "/usr/share/opensearch-dashboards/custom-branding/loading-logo.svg"
-  faviconUrl: "/usr/share/opensearch-dashboards/custom-branding/favicon.svg"
+    defaultUrl: "https://<dashboards-hostname>/ui/assets/branding/loading-logo.svg"
+  faviconUrl: "https://<dashboards-hostname>/ui/assets/branding/favicon.svg"
   applicationTitle: "DMARC Dashboards"
 ```
+
+You can also use a remote URL (e.g., `https://example.com/logo.svg`) instead of hosting files locally.
 
 | Property | Purpose |
 | ---------- | --------- |
