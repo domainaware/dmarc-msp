@@ -9,6 +9,7 @@ from dmarc_msp.api.dependencies import (
     DashboardServiceDep,
     DbDep,
     OpenSearchServiceDep,
+    RetentionServiceDep,
     SettingsDep,
 )
 from dmarc_msp.api.schemas import (
@@ -30,8 +31,14 @@ def create_client(
     svc: ClientServiceDep,
     os_svc: OpenSearchServiceDep,
     dash_svc: DashboardServiceDep,
-    settings: SettingsDep,
+    ret_svc: RetentionServiceDep,
 ):
+    # Verify OpenSearch is reachable before creating the client
+    try:
+        os_svc.health()
+    except Exception as e:
+        raise HTTPException(503, f"Cannot connect to OpenSearch: {e}")
+
     try:
         client = svc.create(
             name=body.name,
@@ -40,20 +47,13 @@ def create_client(
             notes=body.notes,
             retention_days=body.retention_days,
         )
-        # Provision OpenSearch tenant, role, and dashboards
         os_svc.provision_tenant(client.tenant_name)
         os_svc.create_client_role(client.tenant_name, client.index_prefix)
         if client.retention_days:
-            from dmarc_msp.services.retention import RetentionService
-
-            ret_svc = RetentionService(settings.opensearch, settings.retention)
             ret_svc.create_client_policy(
                 client.index_prefix, client.retention_days
             )
-        try:
-            dash_svc.import_for_client(client.tenant_name, client.index_prefix)
-        except FileNotFoundError:
-            pass  # Dashboard template not available
+        dash_svc.import_for_client(client.tenant_name, client.index_prefix)
         return svc.to_info(client)
     except ClientAlreadyExistsError as e:
         raise HTTPException(409, str(e))
