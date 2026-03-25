@@ -44,6 +44,11 @@ class CloudflareDNSProvider(DNSProvider):
         self._zone_id_cache[zone] = zone_id
         return zone_id
 
+    def _fqdn(self, name: str, zone: str) -> str:
+        """Ensure name is a fully qualified domain name."""
+        fqdn = f"{name}.{zone}" if not name.endswith(f".{zone}") else name
+        return fqdn
+
     def create_txt_record(
         self, zone: str, name: str, value: str, ttl: int = 3600
     ) -> DNSRecord:
@@ -56,17 +61,18 @@ class CloudflareDNSProvider(DNSProvider):
                 logger.info("TXT record already exists: %s -> %s", name, value)
                 return rec
 
+        fqdn = self._fqdn(name, zone)
         result = self._client.dns.records.create(
             zone_id=zone_id,
             type="TXT",
-            name=name,
+            name=fqdn,
             content=value,
             ttl=ttl,
         )
         record_id = result.id  # type: ignore[union-attr]
-        logger.info("Created TXT record: %s -> %s (id=%s)", name, value, record_id)
+        logger.info("Created TXT record: %s -> %s (id=%s)", fqdn, value, record_id)
         return DNSRecord(
-            fqdn=f"{name}.{zone}",
+            fqdn=fqdn,
             value=value,
             ttl=ttl,
             record_id=record_id,
@@ -76,8 +82,9 @@ class CloudflareDNSProvider(DNSProvider):
         self, zone: str, name: str, value: str | None = None
     ) -> bool:
         zone_id = self._get_zone_id(zone)
+        fqdn = self._fqdn(name, zone)
         records = self._client.dns.records.list(
-            zone_id=zone_id, type="TXT", name=name
+            zone_id=zone_id, type="TXT", name=fqdn
         )
         deleted = False
         for rec in records.result or []:
@@ -89,8 +96,9 @@ class CloudflareDNSProvider(DNSProvider):
 
     def get_txt_records(self, zone: str, name: str) -> list[DNSRecord]:
         zone_id = self._get_zone_id(zone)
+        fqdn = self._fqdn(name, zone)
         records = self._client.dns.records.list(
-            zone_id=zone_id, type="TXT", name=name
+            zone_id=zone_id, type="TXT", name=fqdn
         )
         return [
             DNSRecord(

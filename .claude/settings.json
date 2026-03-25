@@ -12,7 +12,11 @@
       "Bash(python -m pytest tests/test_config.py -v)",
       "Bash(python -m pytest -v)",
       "WebFetch(domain:opensearch.org)",
-      "WebFetch(domain:docs.opensearch.org)"
+      "WebFetch(domain:docs.opensearch.org)",
+      "Bash(curl -s 'https://developers.cloudflare.com/api/resources/dns/subresources/records/methods/list/')",
+      "Bash(curl -s 'https://developers.cloudflare.com/api/resources/dns/subresources/records/methods/create/')",
+      "WebFetch(domain:developers.cloudflare.com)",
+      "WebFetch(domain:docs.cloud.google.com)"
     ]
   }
 }

@@ -12,13 +12,21 @@ logger = logging.getLogger(__name__)
 DMARC_AUTH_VALUE = "v=DMARC1"
 
 
+class DNSProviderError(Exception):
+    """Wraps provider errors with the provider name for clarity."""
+
+
 class DNSService:
     """Orchestrates DMARC authorization DNS record lifecycle."""
 
     def __init__(self, provider: DNSProvider, settings: Settings):
         self.provider = provider
+        self.provider_name = settings.dns.provider
         self.msp_domain = settings.msp.domain
         self.zone = settings.dns.zone
+
+    def _wrap_error(self, e: Exception) -> DNSProviderError:
+        return DNSProviderError(f"[{self.provider_name}] {e}")
 
     def authorization_record_name(self, client_domain: str) -> str:
         """Compute the DMARC authorization record name.
@@ -45,21 +53,30 @@ class DNSService:
             self.zone,
             DMARC_AUTH_VALUE,
         )
-        return self.provider.create_txt_record(
-            zone=self.zone, name=name, value=DMARC_AUTH_VALUE
-        )
+        try:
+            return self.provider.create_txt_record(
+                zone=self.zone, name=name, value=DMARC_AUTH_VALUE
+            )
+        except Exception as e:
+            raise self._wrap_error(e) from e
 
     def delete_authorization_record(self, client_domain: str) -> bool:
         """Delete the DMARC authorization TXT record for a client domain."""
         name = self.authorization_record_name(client_domain)
         logger.info("Deleting DMARC auth record: %s.%s", name, self.zone)
-        return self.provider.delete_txt_record(
-            zone=self.zone, name=name, value=DMARC_AUTH_VALUE
-        )
+        try:
+            return self.provider.delete_txt_record(
+                zone=self.zone, name=name, value=DMARC_AUTH_VALUE
+            )
+        except Exception as e:
+            raise self._wrap_error(e) from e
 
     def verify_authorization_record(self, client_domain: str) -> bool:
         """Check if the DMARC authorization record exists and is correct."""
         name = self.authorization_record_name(client_domain)
-        return self.provider.verify_record_exists(
-            zone=self.zone, name=name, expected_value=DMARC_AUTH_VALUE
-        )
+        try:
+            return self.provider.verify_record_exists(
+                zone=self.zone, name=name, expected_value=DMARC_AUTH_VALUE
+            )
+        except Exception as e:
+            raise self._wrap_error(e) from e
