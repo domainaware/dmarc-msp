@@ -76,7 +76,7 @@ $EDITOR docker-compose.yml
 ### 2. Start the stack
 
 ```bash
-docker compose up -d
+docker compose up --build -d
 ```
 
 TLS certificates are obtained automatically on first boot. The nginx container starts HTTP-only, certbot obtains a Let's Encrypt certificate via HTTP-01 challenge (port 80), and nginx automatically reloads with the full HTTPS config. Renewals are handled automatically every 12 hours. Postfix waits for certificates before starting to ensure STARTTLS is available from the start.
@@ -289,7 +289,7 @@ RemainAfterExit=yes
 User=dmarc-msp
 Group=dmarc-msp
 WorkingDirectory=/opt/dmarc-msp
-ExecStart=/usr/bin/docker compose up -d
+ExecStart=/usr/bin/docker compose up --build -d
 ExecStop=/usr/bin/docker compose down
 TimeoutStartSec=300
 
@@ -326,7 +326,7 @@ uv pip install -e ".[dev]"
 pytest
 
 # Use dev compose (no TLS, no nginx, security disabled)
-docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 ```
 
 ## Architecture
@@ -377,7 +377,7 @@ Internet
 ║ │ nginx           │ │ Postfix      │ │ certbot      │ │ dmarc-msp      │ ║
 ║ │ :80 :443        │ │ :25 :587     │ │              │ │ localhost:8000 │ ║
 ║ │ TLS termination │ │ receive-only │ │ HTTP-01      │ │ CLI + API      │ ║
-║ │ rate limiting   │ │ STARTTLS     │ │ auto-renewal │ │ ->DNS APIs     │ ║
+║ │ rate limiting   │ │ STARTTLS/TLS │ │ auto-renewal │ │ ->DNS APIs     │ ║
 ║ └─────────────────┘ └──────────────┘ └──────────────┘ └────────────────┘ ║
 ║          │                                                               ║
 ║ ┌──────────────────┐ ┌───────────────┐ ┌──────────────┐                  ║
@@ -420,8 +420,8 @@ Services that bridge both networks: Dashboards, parsedmarc, dmarc-msp.
 |------------|------------|----------------------------------------|
 | `:80`      | nginx      | HTTP → HTTPS redirect + ACME challenges|
 | `:443`     | nginx      | HTTPS reverse proxy to Dashboards      |
-| `:25`      | Postfix    | SMTP from DMARC report senders         |
-| `:587`     | Postfix    | SMTP submission (STARTTLS)             |
+| `:25`      | Postfix    | SMTP (STARTTLS)                        |
+| `:587`     | Postfix    | SMTP over TLS                          |
 | `lo:8000`  | dmarc-msp  | Management API (localhost only)        |
 
 OpenSearch `:9200` and Dashboards `:5601` are internal only — no host port binding.
