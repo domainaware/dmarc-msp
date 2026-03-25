@@ -16,34 +16,48 @@ def _make_template(tmp_path, lines=None):
     template = tmp_path / "dashboards.ndjson"
     if lines is None:
         lines = [
-            json.dumps({"type": "index-pattern", "id": "dmarc-aggregate"}),
             json.dumps({
-                "type": "visualization", "attributes": {"title": "dmarc_overview"}}),
+                "type": "index-pattern",
+                "attributes": {"title": "dmarc_aggregate*"},
+            }),
+            json.dumps({
+                "type": "index-pattern",
+                "attributes": {"title": "dmarc_f*"},
+            }),
+            json.dumps({
+                "type": "index-pattern",
+                "attributes": {"title": "smtp_tls*"},
+            }),
         ]
     template.write_text("\n".join(lines) + "\n")
     dash_config = DashboardsConfig(
-        url="https://localhost:5601",
+        url="http://localhost:5601",
         saved_objects_template=str(template),
     )
     os_config = OpenSearchConfig(password="test_password")
     return DashboardService(dash_config, os_config)
 
 
-def test_rewrite_template_replaces_prefix(tmp_path):
+def test_rewrite_template_prepends_prefix(tmp_path):
     svc = _make_template(tmp_path)
     rewritten = svc._rewrite_template("acme_corp")
-    assert '"acme_corp-aggregate"' in rewritten
-    assert '"acme_corp_overview"' in rewritten
-    assert '"dmarc-' not in rewritten
-    assert '"dmarc_' not in rewritten
+    assert '"acme_corp_dmarc_aggregate*"' in rewritten
+    assert '"acme_corp_dmarc_f*"' in rewritten
+    assert '"acme_corp_smtp_tls*"' in rewritten
+
+
+def test_rewrite_template_does_not_double_prefix(tmp_path):
+    svc = _make_template(tmp_path)
+    rewritten = svc._rewrite_template("acme_corp")
+    assert "acme_corp_acme_corp" not in rewritten
 
 
 def test_rewrite_template_skips_blank_lines(tmp_path):
     lines = [
-        json.dumps({"type": "index-pattern", "id": "dmarc-agg"}),
+        json.dumps({"type": "index-pattern", "attributes": {"title": "dmarc_aggregate*"}}),
         "",
         "   ",
-        json.dumps({"type": "vis", "id": "dmarc-vis"}),
+        json.dumps({"type": "vis", "id": "some-vis"}),
     ]
     svc = _make_template(tmp_path, lines)
     rewritten = svc._rewrite_template("client1")

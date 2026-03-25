@@ -16,8 +16,10 @@ logger = logging.getLogger(__name__)
 class DashboardService:
     """Rewrites and imports saved objects into per-client tenants."""
 
-    # The default index prefix used in the template NDJSON
-    TEMPLATE_PREFIX = "dmarc"
+    # Index pattern names used in the template NDJSON (without prefix).
+    # parsedmarc creates indices like {prefix}_{pattern} when using
+    # index_prefix_domain_map, so rewriting prepends the client prefix.
+    TEMPLATE_PATTERNS = ["dmarc_aggregate", "dmarc_f", "smtp_tls"]
 
     def __init__(
         self,
@@ -43,7 +45,7 @@ class DashboardService:
         )
 
     def _rewrite_template(self, index_prefix: str) -> str:
-        """Replace the template index prefix with the client's prefix."""
+        """Prepend the client's index prefix to all known index patterns."""
         content = self.template_path.read_text()
         lines = content.strip().split("\n")
         rewritten_lines = []
@@ -52,12 +54,11 @@ class DashboardService:
             if not line.strip():
                 continue
             obj = json.loads(line)
-            rewritten = json.dumps(obj).replace(
-                f'"{self.TEMPLATE_PREFIX}-', f'"{index_prefix}-'
-            )
-            rewritten = rewritten.replace(
-                f'"{self.TEMPLATE_PREFIX}_', f'"{index_prefix}_'
-            )
+            rewritten = json.dumps(obj)
+            for pattern in self.TEMPLATE_PATTERNS:
+                rewritten = rewritten.replace(
+                    f'"{pattern}', f'"{index_prefix}_{pattern}'
+                )
             rewritten_lines.append(rewritten)
 
         return "\n".join(rewritten_lines)
