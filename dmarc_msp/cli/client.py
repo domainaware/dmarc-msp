@@ -34,6 +34,16 @@ def create(
     db = get_db_session(settings)
     svc = ClientService(db)
     try:
+        # Verify OpenSearch is reachable before creating the client
+        try:
+            os_svc = OpenSearchService(settings.opensearch)
+            os_svc.health()
+        except Exception as e:
+            console.print(
+                f"[red]Error:[/red] Cannot connect to OpenSearch: {e}"
+            )
+            raise typer.Exit(1)
+
         client = svc.create(
             name=name,
             contact_email=contact,
@@ -46,29 +56,21 @@ def create(
         console.print(f"  Tenant:       {client.tenant_name}")
 
         # Provision OpenSearch tenant, role, and dashboards
-        try:
-            os_svc = OpenSearchService(settings.opensearch)
-            os_svc.provision_tenant(client.tenant_name)
-            os_svc.create_client_role(client.tenant_name, client.index_prefix)
-            console.print("  OpenSearch:   tenant + role provisioned")
+        os_svc.provision_tenant(client.tenant_name)
+        os_svc.create_client_role(client.tenant_name, client.index_prefix)
+        console.print("  OpenSearch:   tenant + role provisioned")
 
-            if client.retention_days:
-                ret_svc = RetentionService(settings.opensearch, settings.retention)
-                ret_svc.create_client_policy(
-                    client.index_prefix, client.retention_days
-                )
+        if client.retention_days:
+            ret_svc = RetentionService(settings.opensearch, settings.retention)
+            ret_svc.create_client_policy(
+                client.index_prefix, client.retention_days
+            )
 
-            dash_svc = DashboardService(settings.dashboards, settings.opensearch)
-            dash_svc.import_for_client(client.tenant_name, client.index_prefix)
-            console.print("  Dashboards:   imported")
-        except Exception as e:
-            console.print(
-                f"  [yellow]Warning:[/yellow] OpenSearch provisioning failed: {e}"
-            )
-            console.print(
-                "  Run 'dmarcmsp tenant provision' and "
-                "'dmarcmsp dashboard import' manually."
-            )
+        dash_svc = DashboardService(settings.dashboards, settings.opensearch)
+        dash_svc.import_for_client(client.tenant_name, client.index_prefix)
+        console.print("  Dashboards:   imported")
+    except typer.Exit:
+        raise
     except Exception as e:
         console.print(f"[red]Error:[/red] {e}")
         raise typer.Exit(1)

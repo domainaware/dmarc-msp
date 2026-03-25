@@ -106,7 +106,8 @@ opensearch:
 # ---------------------------------------------------------------------------
 dashboards:
   # Dashboards URL. In Docker, this is the internal service name.
-  url: https://dashboards:5601
+  # Dashboards serves plain HTTP internally — TLS is terminated at nginx.
+  url: http://opensearch-dashboards:5601
 
   # Path to the parsedmarc NDJSON saved objects template. This file
   # is rewritten with per-client index prefixes during onboarding.
