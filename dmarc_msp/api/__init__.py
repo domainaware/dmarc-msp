@@ -45,7 +45,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(domains.router, prefix="/api/v1/domains", tags=["domains"])
     app.include_router(tenants.router, prefix="/api/v1/tenants", tags=["tenants"])
     app.include_router(
-        dashboards.router, prefix="/api/v1/dashboards", tags=["dashboards"]
+        dashboards.router, prefix="/api/v1/dashboard", tags=["dashboard"]
     )
     app.include_router(
         parsedmarc.router, prefix="/api/v1/parsedmarc", tags=["parsedmarc"]

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from tests.test_api.conftest import create_test_client
 
-# --- POST /api/v1/dashboards/import ---
+# --- POST /api/v1/dashboard/import ---
 
 
 def test_import_dashboards(api_client_with_mocks):
@@ -12,7 +12,7 @@ def test_import_dashboards(api_client_with_mocks):
     client, _, mock_dash, _ = api_client_with_mocks
     mock_dash.reset_mock()
     resp = client.post(
-        "/api/v1/dashboards/import",
+        "/api/v1/dashboard/import",
         json={"client_name": "Acme Corp"},
     )
     assert resp.status_code == 200
@@ -23,7 +23,7 @@ def test_import_dashboards(api_client_with_mocks):
 def test_import_dashboards_client_not_found(api_client_with_mocks):
     client, *_ = api_client_with_mocks
     resp = client.post(
-        "/api/v1/dashboards/import",
+        "/api/v1/dashboard/import",
         json={"client_name": "Nonexistent"},
     )
     assert resp.status_code == 404
@@ -34,7 +34,7 @@ def test_import_dashboards_template_missing(api_client_with_mocks):
     client, _, mock_dash, _ = api_client_with_mocks
     mock_dash.import_for_client.side_effect = FileNotFoundError("missing")
     resp = client.post(
-        "/api/v1/dashboards/import",
+        "/api/v1/dashboard/import",
         json={"client_name": "Acme Corp"},
     )
     assert resp.status_code == 500

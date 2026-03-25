@@ -204,7 +204,7 @@ dmarcmsp domain bulk-move "Other Corp" domains.txt
 Re-import dashboards into all active client tenants — useful after a parsedmarc update or branding change:
 
 ```bash
-dmarcmsp dashboards import-all
+dmarcmsp dashboard import-all
 ```
 
 ### Granular operations
@@ -215,7 +215,7 @@ dmarcmsp tenant provision "Acme Corp"
 dmarcmsp tenant deprovision "Acme Corp"
 
 # Re-import dashboards for a single client
-dmarcmsp dashboards import "Acme Corp"
+dmarcmsp dashboard import "Acme Corp"
 
 # Reload parsedmarc config
 dmarcmsp parsedmarc reload

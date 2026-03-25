@@ -45,7 +45,7 @@ dmarc_msp/
 │   ├── client.py       # client create/list/show/update/rename/offboard
 │   ├── domain.py       # domain add/remove/move/verify/list/bulk-*
 │   ├── tenant.py       # tenant provision/deprovision
-│   ├── dashboard.py    # dashboards import
+│   ├── dashboard.py    # dashboard import / import-all
 │   ├── retention.py    # retention cleanup-emails/ensure-default-policy
 │   └── parsedmarc.py   # parsedmarc reload
 └── api/                # FastAPI management API
