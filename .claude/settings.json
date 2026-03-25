@@ -6,7 +6,11 @@
       "Bash(ruff check:*)",
       "Bash(pytest)",
       "Bash(python -m pyright dmarc_msp/)",
-      "Bash(.venv/bin/python -m pyright dmarc_msp/)"
+      "Bash(.venv/bin/python -m pyright dmarc_msp/)",
+      "Bash(coverage run:*)",
+      "Bash(coverage report:*)",
+      "Bash(python -m pytest tests/test_config.py -v)",
+      "Bash(python -m pytest -v)"
     ]
   }
 }
