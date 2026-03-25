@@ -343,7 +343,8 @@ cd /opt/dmarc-msp
 sudo -u dmarc-msp cp .env.example .env
 sudo -u dmarc-msp cp parsedmarc.example.ini parsedmarc.ini
 sudo -u dmarc-msp cp dmarc-msp.example.yaml dmarc-msp.yaml
-sudo -u dmarc-msp chmod 600 .env parsedmarc.ini dmarc-msp.yaml 
+sudo -u dmarc-msp touch domain_map.yaml
+sudo -u dmarc-msp chmod 600 .env parsedmarc.ini dmarc-msp.yaml
 sudo -u dmarc-msp chmod 700 secrets/
 # After you have added any file under secrets, run
 sudo -u dmarc-msp find secrets/ -type f -exec chmod 600 {} +
@@ -586,6 +587,27 @@ Clients authenticate to Dashboards, not to OpenSearch directly. The `kibanaserve
 - **Rotate secrets** by updating `.env` and `parsedmarc.ini`, then restarting affected services. No code changes required.
 - **Monitor the audit log** — every onboarding, offboarding, and provisioning action is recorded with timestamps in the `audit_log` table.
 - **Keep images updated** — pin OpenSearch and parsedmarc to specific versions in `docker-compose.yml` and update deliberately.
+
+## FAQ
+
+### `[Errno 21] Is a directory: '/etc/parsedmarc_domain_map.yaml'`
+
+This happens when `domain_map.yaml` didn't exist before the first `docker compose up`. Docker creates missing bind-mount sources as root-owned directories instead of files.
+
+Fix:
+
+```bash
+docker compose down
+sudo rm -rf /opt/dmarc-msp/domain_map.yaml
+sudo -u dmarc-msp touch /opt/dmarc-msp/domain_map.yaml
+docker compose up --build -d
+```
+
+To prevent this, always create the file before starting the stack (included in the Quick Start and Production Deployment setup steps):
+
+```bash
+touch domain_map.yaml
+```
 
 ## License
 
