@@ -10,6 +10,9 @@ services:
       - certs:/etc/letsencrypt:ro
     environment:
       - MSP_DOMAIN=${MSP_DOMAIN:-dmarc.msp-example.com}
+    depends_on:
+      certbot:
+        condition: service_healthy
     networks:
       - frontend
     restart: unless-stopped
@@ -110,6 +113,11 @@ services:
         certbot renew --quiet --deploy-hook "docker kill -s HUP parsedmarc-nginx && docker kill -s HUP parsedmarc-postfix";
         sleep 12h & wait $${!};
       done'
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /etc/letsencrypt/live/${MSP_DOMAIN:-dmarc.msp-example.com}/fullchain.pem"]
+      interval: 5s
+      timeout: 2s
+      retries: 60
     depends_on:
       - nginx
     networks:
