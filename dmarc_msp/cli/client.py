@@ -190,7 +190,7 @@ def update(
 @app.command()
 def rename(
     name: str = typer.Argument(..., help="Current client name"),
-    new_name: str = typer.Option(..., "--new-name", help="New client name"),
+    new_name: str = typer.Argument(..., help="New client name"),
     config: str | None = typer.Option(None, "--config", "-c"),
 ):
     """Rename a client. Index prefix and tenant name stay the same."""

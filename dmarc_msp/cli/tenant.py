@@ -15,7 +15,7 @@ console = Console()
 
 @app.command()
 def provision(
-    client: str = typer.Option(..., "--client", help="Client name"),
+    client: str = typer.Argument(..., help="Client name"),
     config: str | None = typer.Option(None, "--config", "-c"),
 ):
     """Provision an OpenSearch tenant and role for a client."""
@@ -37,7 +37,7 @@ def provision(
 
 @app.command()
 def deprovision(
-    client: str = typer.Option(..., "--client", help="Client name"),
+    client: str = typer.Argument(..., help="Client name"),
     config: str | None = typer.Option(None, "--config", "-c"),
 ):
     """Deprovision an OpenSearch tenant and role for a client."""

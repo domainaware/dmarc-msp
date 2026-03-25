@@ -15,7 +15,7 @@ console = Console()
 
 @app.command("import")
 def import_dashboards(
-    client: str = typer.Option(..., "--client", help="Client name"),
+    client: str = typer.Argument(..., help="Client name"),
     config: str | None = typer.Option(None, "--config", "-c"),
 ):
     """Import dashboards into a client's tenant."""

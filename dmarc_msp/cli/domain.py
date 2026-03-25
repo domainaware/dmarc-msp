@@ -20,8 +20,8 @@ console = Console()
 
 @app.command()
 def add(
-    client: str = typer.Option(..., "--client", help="Client name"),
-    domain: str = typer.Option(..., "--domain", help="Domain to add"),
+    client: str = typer.Argument(..., help="Client name"),
+    domain: str = typer.Argument(..., help="Domain to add"),
     config: str | None = typer.Option(None, "--config", "-c"),
 ):
     """Add a domain to a client."""
@@ -42,7 +42,7 @@ def add(
 
 @app.command()
 def remove(
-    domain: str = typer.Option(..., "--domain", help="Domain to remove"),
+    domain: str = typer.Argument(..., help="Domain to remove"),
     keep_dns: bool = typer.Option(False, "--keep-dns", help="Keep DNS records"),
     config: str | None = typer.Option(None, "--config", "-c"),
 ):
@@ -64,8 +64,8 @@ def remove(
 
 @app.command()
 def move(
-    domain: str = typer.Option(..., "--domain", help="Domain to move"),
-    to: str = typer.Option(..., "--to", help="Destination client name"),
+    domain: str = typer.Argument(..., help="Domain to move"),
+    to: str = typer.Argument(..., help="Destination client name"),
     config: str | None = typer.Option(None, "--config", "-c"),
 ):
     """Move a domain to a different client."""
@@ -87,7 +87,7 @@ def move(
 
 @app.command()
 def verify(
-    domain: str = typer.Option(..., "--domain", help="Domain to verify"),
+    domain: str = typer.Argument(..., help="Domain to verify"),
     config: str | None = typer.Option(None, "--config", "-c"),
 ):
     """Verify DNS propagation for a domain's authorization record."""
@@ -149,8 +149,8 @@ def list_domains(
 
 @app.command("bulk-add")
 def bulk_add(
-    client: str = typer.Option(..., "--client"),
-    file: str = typer.Option(..., "--file", help="File with one domain per line"),
+    client: str = typer.Argument(..., help="Client name"),
+    file: str = typer.Argument(..., help="File with one domain per line"),
     config: str | None = typer.Option(None, "--config", "-c"),
 ):
     """Bulk-add domains from a file."""
@@ -174,7 +174,7 @@ def bulk_add(
 
 @app.command("bulk-remove")
 def bulk_remove(
-    file: str = typer.Option(..., "--file"),
+    file: str = typer.Argument(..., help="File with one domain per line"),
     config: str | None = typer.Option(None, "--config", "-c"),
 ):
     """Bulk-remove domains from a file."""
@@ -196,8 +196,8 @@ def bulk_remove(
 
 @app.command("bulk-move")
 def bulk_move(
-    to: str = typer.Option(..., "--to"),
-    file: str = typer.Option(..., "--file"),
+    to: str = typer.Argument(..., help="Destination client name"),
+    file: str = typer.Argument(..., help="File with one domain per line"),
     config: str | None = typer.Option(None, "--config", "-c"),
 ):
     """Bulk-move domains from a file to a different client."""

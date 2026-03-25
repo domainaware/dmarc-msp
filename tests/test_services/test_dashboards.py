@@ -54,7 +54,10 @@ def test_rewrite_template_does_not_double_prefix(tmp_path):
 
 def test_rewrite_template_skips_blank_lines(tmp_path):
     lines = [
-        json.dumps({"type": "index-pattern", "attributes": {"title": "dmarc_aggregate*"}}),
+        json.dumps({
+            "type": "index-pattern",
+            "attributes": {"title": "dmarc_aggregate*"},
+        }),
         "",
         "   ",
         json.dumps({"type": "vis", "id": "some-vis"}),

@@ -159,7 +159,7 @@ dmarcmsp client update "Acme Corp" --contact new@acme.com
 dmarcmsp client update "Acme Corp" --retention-days 365
 
 # Rename a client (index prefix and tenant stay the same)
-dmarcmsp client rename "Acme Corp" --new-name "Acme Inc"
+dmarcmsp client rename "Acme Corp" "Acme Inc"
 
 # Offboard (preview first, then execute)
 dmarcmsp client offboard "Acme Corp" --dry-run
@@ -171,18 +171,18 @@ dmarcmsp client offboard "Acme Corp" --purge-indices   # also delete data
 
 ```bash
 # Add domains
-dmarcmsp domain add --client "Acme Corp" --domain acme.com
-dmarcmsp domain add --client "Acme Corp" --domain acme.net
+dmarcmsp domain add "Acme Corp" acme.com
+dmarcmsp domain add "Acme Corp" acme.net
 
 # Remove a domain
-dmarcmsp domain remove --domain acme.net
-dmarcmsp domain remove --domain acme.net --keep-dns
+dmarcmsp domain remove acme.net
+dmarcmsp domain remove acme.net --keep-dns
 
 # Move a domain to another client
-dmarcmsp domain move --domain acme.net --to "Other Corp"
+dmarcmsp domain move acme.net "Other Corp"
 
 # Verify DNS propagation
-dmarcmsp domain verify --domain acme.com
+dmarcmsp domain verify acme.com
 
 # List domains
 dmarcmsp domain list
@@ -194,9 +194,9 @@ dmarcmsp domain list --client "Acme Corp"
 Create a text file with one domain per line (blank lines and `#` comments are skipped):
 
 ```bash
-dmarcmsp domain bulk-add --client "Acme Corp" --file domains.txt
-dmarcmsp domain bulk-remove --file domains.txt
-dmarcmsp domain bulk-move --to "Other Corp" --file domains.txt
+dmarcmsp domain bulk-add "Acme Corp" domains.txt
+dmarcmsp domain bulk-remove domains.txt
+dmarcmsp domain bulk-move "Other Corp" domains.txt
 ```
 
 ### Update dashboards
@@ -211,11 +211,11 @@ dmarcmsp dashboards import-all
 
 ```bash
 # Manually provision/deprovision an OpenSearch tenant
-dmarcmsp tenant provision --client "Acme Corp"
-dmarcmsp tenant deprovision --client "Acme Corp"
+dmarcmsp tenant provision "Acme Corp"
+dmarcmsp tenant deprovision "Acme Corp"
 
 # Re-import dashboards for a single client
-dmarcmsp dashboards import --client "Acme Corp"
+dmarcmsp dashboards import "Acme Corp"
 
 # Reload parsedmarc config
 dmarcmsp parsedmarc reload
