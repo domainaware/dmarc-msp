@@ -76,3 +76,21 @@ def config_validate(
     console.print(f"  dns_provider: {settings.dns.provider}")
     console.print(f"  msp_domain: {settings.msp.domain}")
     console.print(f"  database: {settings.database.url}")
+
+    # Check OpenSearch Dashboards connectivity
+    console.print(f"  dashboards_url: {settings.dashboards.url}", end=" ")
+    try:
+        import httpx
+
+        with httpx.Client(verify=False, timeout=5) as client:
+            resp = client.get(
+                f"{settings.dashboards.url}/api/status",
+                auth=(
+                    settings.opensearch.username,
+                    settings.opensearch.resolved_password,
+                ),
+            )
+            resp.raise_for_status()
+        console.print("[green]✓[/green]")
+    except Exception as e:
+        console.print(f"[red]✗[/red] {e}")

@@ -42,7 +42,7 @@ class OpenSearchConfig(BaseModel):
 
 
 class DashboardsConfig(BaseModel):
-    url: str = "https://dashboards:5601"
+    url: str = "http://opensearch-dashboards:5601"
     saved_objects_template: str = "/etc/dmarc-msp/opensearch_dashboards.ndjson"
 
 
