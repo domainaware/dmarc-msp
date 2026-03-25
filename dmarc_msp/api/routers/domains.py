@@ -18,7 +18,9 @@ router = APIRouter()
 def add_domain(body: DomainAdd, settings: SettingsDep, db: DbDep):
     try:
         svc = get_onboarding_service(settings, db)
-        return svc.add_domain(body.client_name, body.domain)
+        return svc.add_domain(
+            body.client_name, body.domain, create_client=body.create_client,
+        )
     except DomainAlreadyExistsError as e:
         raise HTTPException(409, str(e))
     except ClientNotFoundError as e:

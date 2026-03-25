@@ -22,6 +22,10 @@ console = Console()
 def add(
     client: str = typer.Argument(..., help="Client name"),
     domains: list[str] = typer.Argument(..., help="Domains to add"),
+    create_client: bool = typer.Option(
+        False, "--create-client",
+        help="Create the client if it doesn't exist",
+    ),
     config: str | None = typer.Option(None, "--config", "-c"),
 ):
     """Add one or more domains to a client."""
@@ -32,7 +36,9 @@ def add(
         failed = []
         for domain in domains:
             try:
-                result = svc.add_domain(client, domain)
+                result = svc.add_domain(
+                    client, domain, create_client=create_client,
+                )
                 console.print(
                     f"  [green]✓[/green] {result.domain} "
                     f"(dns={'verified' if result.dns_verified else 'pending'})"
@@ -180,6 +186,10 @@ def list_domains(
 def bulk_add(
     client: str = typer.Argument(..., help="Client name"),
     file: str = typer.Argument(..., help="File with one domain per line"),
+    create_client: bool = typer.Option(
+        False, "--create-client",
+        help="Create the client if it doesn't exist",
+    ),
     config: str | None = typer.Option(None, "--config", "-c"),
 ):
     """Bulk-add domains from a file."""
@@ -187,7 +197,9 @@ def bulk_add(
     db = get_db_session(settings)
     try:
         svc = get_onboarding_service(settings, db)
-        result = svc.bulk_import(file, client, operation="add")
+        result = svc.bulk_import(
+            file, client, operation="add", create_client=create_client,
+        )
         console.print(
             f"Bulk add: {len(result.succeeded)} succeeded, "
             f"{len(result.skipped)} skipped, {len(result.failed)} failed"

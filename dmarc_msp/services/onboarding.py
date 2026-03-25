@@ -58,8 +58,13 @@ class OnboardingService:
         domain: str,
         index_prefix: str | None = None,
         contact_email: str | None = None,
+        create_client: bool = False,
     ) -> OnboardingResult:
         """Full onboarding pipeline for a single domain. Idempotent.
+
+        If the client doesn't exist and create_client is False,
+        raises ClientNotFoundError. Pass create_client=True to
+        auto-create the client.
 
         The entire operation is transactional — if any step fails, all
         database changes are rolled back.
@@ -84,6 +89,11 @@ class OnboardingService:
             try:
                 client = self.client_service.get(client_name)
             except ClientNotFoundError:
+                if not create_client:
+                    raise ClientNotFoundError(
+                        f"Client '{client_name}' not found. "
+                        f"Use --create-client to create it automatically."
+                    )
                 client = self.client_service.create(
                     name=client_name,
                     contact_email=contact_email,
@@ -294,7 +304,11 @@ class OnboardingService:
         )
 
     def bulk_import(
-        self, file_path: str, client_name: str, operation: str = "add"
+        self,
+        file_path: str,
+        client_name: str,
+        operation: str = "add",
+        create_client: bool = False,
     ) -> BulkResult:
         """Process domains from a newline-separated text file."""
         domains = self._parse_domain_file(file_path)
@@ -303,7 +317,9 @@ class OnboardingService:
         for domain in domains:
             try:
                 if operation == "add":
-                    self.add_domain(client_name, domain)
+                    self.add_domain(
+                        client_name, domain, create_client=create_client,
+                    )
                     results.succeeded.append(domain)
                 elif operation == "remove":
                     self.remove_domain(domain)

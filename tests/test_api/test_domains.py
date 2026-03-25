@@ -35,6 +35,51 @@ def test_add_domain(api_client_with_mocks):
     assert resp.json()["domain"] == "acme.com"
 
 
+def test_add_domain_passes_create_client_flag(api_client_with_mocks):
+    client, *_ = api_client_with_mocks
+    with _patch_onboarding() as mock_get_svc:
+        mock_svc = MagicMock()
+        mock_svc.add_domain.return_value = MagicMock(
+            client_name="new client",
+            domain="acme.com",
+            dns_verified=True,
+            tenant="new_client",
+            index_prefix="new_client",
+        )
+        mock_get_svc.return_value = mock_svc
+        resp = client.post(
+            "/api/v1/domains/add",
+            json={
+                "client_name": "New Client",
+                "domain": "acme.com",
+                "create_client": True,
+            },
+        )
+    assert resp.status_code == 201
+    mock_svc.add_domain.assert_called_once_with(
+        "New Client", "acme.com", create_client=True,
+    )
+
+
+def test_add_domain_default_no_create_client(api_client_with_mocks):
+    client, *_ = api_client_with_mocks
+    with _patch_onboarding() as mock_get_svc:
+        from dmarc_msp.services.clients import ClientNotFoundError
+
+        mock_svc = MagicMock()
+        mock_svc.add_domain.side_effect = ClientNotFoundError(
+            "Client 'Nonexistent' not found. "
+            "Use --create-client to create it automatically."
+        )
+        mock_get_svc.return_value = mock_svc
+        resp = client.post(
+            "/api/v1/domains/add",
+            json={"client_name": "Nonexistent", "domain": "acme.com"},
+        )
+    assert resp.status_code == 404
+    assert "--create-client" in resp.json()["detail"]
+
+
 def test_add_domain_duplicate(api_client_with_mocks):
     client, *_ = api_client_with_mocks
     with _patch_onboarding() as mock_get_svc:

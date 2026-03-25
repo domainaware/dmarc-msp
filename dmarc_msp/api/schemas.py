@@ -26,6 +26,7 @@ class ClientRename(BaseModel):
 class DomainAdd(BaseModel):
     client_name: str
     domain: str
+    create_client: bool = False
 
 
 class DomainRemove(BaseModel):

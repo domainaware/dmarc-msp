@@ -38,12 +38,27 @@ def _make_service(db_session: Session):
     return svc, client_svc
 
 
-def test_add_domain_creates_client_if_missing(db_session: Session):
+def test_add_domain_raises_if_client_missing(db_session: Session):
     svc, _ = _make_service(db_session)
-    result = svc.add_domain("NewClient", "example.com")
+    with pytest.raises(Exception, match="--create-client"):
+        svc.add_domain("NewClient", "example.com")
+
+
+def test_add_domain_creates_client_with_flag(db_session: Session):
+    svc, _ = _make_service(db_session)
+    result = svc.add_domain("NewClient", "example.com", create_client=True)
     assert result.client_name == "newclient"
     assert result.domain == "example.com"
     assert result.dns_verified is True
+
+
+def test_add_domain_create_client_flag_noop_if_exists(db_session: Session):
+    svc, client_svc = _make_service(db_session)
+    client_svc.create("Acme Corp")
+    result = svc.add_domain(
+        "Acme Corp", "acme.com", create_client=True,
+    )
+    assert result.client_name == "acme corp"
 
 
 def test_add_domain_to_existing_client(db_session: Session):
@@ -264,14 +279,39 @@ def test_bulk_import_move(db_session: Session, tmp_path):
 
 def test_bulk_import_handles_errors(db_session: Session, tmp_path):
     svc, client_svc = _make_service(db_session)
+    client_svc.create("Acme Corp")
     svc.dns.create_authorization_record.side_effect = RuntimeError("DNS failure")
 
     domain_file = tmp_path / "domains.txt"
     domain_file.write_text("fail.com\n")
 
-    result = svc.bulk_import(str(domain_file), "NewClient", operation="add")
+    result = svc.bulk_import(str(domain_file), "Acme Corp", operation="add")
     assert len(result.failed) == 1
     assert "DNS failure" in result.failed[0][1]
+
+
+def test_bulk_import_fails_if_client_missing(db_session: Session, tmp_path):
+    svc, _ = _make_service(db_session)
+    domain_file = tmp_path / "domains.txt"
+    domain_file.write_text("acme.com\n")
+
+    result = svc.bulk_import(str(domain_file), "Nonexistent", operation="add")
+    assert len(result.failed) == 1
+    assert "--create-client" in result.failed[0][1]
+
+
+def test_bulk_import_with_create_client(db_session: Session, tmp_path):
+    svc, client_svc = _make_service(db_session)
+    domain_file = tmp_path / "domains.txt"
+    domain_file.write_text("acme.com\nacme.net\n")
+
+    result = svc.bulk_import(
+        str(domain_file), "NewClient", operation="add", create_client=True,
+    )
+    assert len(result.succeeded) == 2
+    clients = client_svc.list()
+    assert len(clients) == 1
+    assert clients[0].name == "newclient"
 
 
 def test_add_domain_rolls_back_on_dns_failure(db_session: Session):
@@ -294,7 +334,7 @@ def test_add_domain_rolls_back_client_on_dns_failure(db_session: Session):
     svc.dns.create_authorization_record.side_effect = RuntimeError("DNS error")
 
     with pytest.raises(RuntimeError, match="DNS error"):
-        svc.add_domain("NewClient", "acme.com")
+        svc.add_domain("NewClient", "acme.com", create_client=True)
 
     # Auto-created client should be rolled back
     clients = client_svc.list()
