@@ -10,7 +10,9 @@
       "Bash(coverage run:*)",
       "Bash(coverage report:*)",
       "Bash(python -m pytest tests/test_config.py -v)",
-      "Bash(python -m pytest -v)"
+      "Bash(python -m pytest -v)",
+      "WebFetch(domain:opensearch.org)",
+      "WebFetch(domain:docs.opensearch.org)"
     ]
   }
 }

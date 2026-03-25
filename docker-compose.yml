@@ -67,6 +67,8 @@ services:
     container_name: parsedmarc-dashboards
     environment:
       - OPENSEARCH_HOSTS=["https://opensearch:9200"]
+    volumes:
+      - ./deploy/dashboards/branding/:/usr/share/opensearch-dashboards/src/core/server/core_app/assets/branding/:ro
     depends_on:
       opensearch:
         condition: service_healthy

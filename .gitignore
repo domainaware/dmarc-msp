@@ -1,7 +1,8 @@
 .env
 secrets/*
 !secrets/.gitkeep
-deploy/dashboards/branding/
+deploy/dashboards/branding/*
+!deploy/dashboards/branding/.gitkeep
 parsedmarc.ini
 dmarc-msp.yaml
 domain_map.yaml

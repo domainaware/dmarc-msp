@@ -253,30 +253,15 @@ client.example.com._report._dmarc.dmarc.msp-example.com.  TXT  "v=DMARC1"
 
 ## Customizing Dashboard Branding
 
-You can replace the default OpenSearch Dashboards logos, favicon, and application title with your own branding.
+You can replace the default OpenSearch Dashboards logos, favicon, and application title with your own branding. The `deploy/dashboards/branding/` directory and volume mount are preconfigured.
 
 ### 1. Add your assets
 
-Place your logo files in a local directory (SVG, PNG, or GIF — SVG recommended):
+Place your image files in `deploy/dashboards/branding/` (SVG, PNG, or GIF — SVG recommended). These are served by Dashboards at the `ui/assets/branding/` URL path.
 
-```bash
-mkdir -p deploy/dashboards/branding
-# Add your files: logo.svg, mark.svg, loading-logo.svg, favicon.svg
-```
+### 2. Configure branding
 
-### 2. Mount the assets into the Dashboards assets directory
-
-OpenSearch Dashboards serves local images through its built-in web server at the `ui/assets/` URL path. Mount your branding files into the container's assets directory so Dashboards can serve them:
-
-```yaml
-opensearch-dashboards:
-  volumes:
-    - ./deploy/dashboards/branding/:/usr/share/opensearch-dashboards/src/core/server/core_app/assets/branding/:ro
-```
-
-### 3. Configure branding
-
-Add the following to `deploy/dashboards/opensearch_dashboards.yml`. The URLs must be HTTP URLs served by Dashboards:
+Add the following to `deploy/dashboards/opensearch_dashboards.yml`. Values must be HTTP URLs — either served locally by Dashboards or hosted remotely (e.g., `https://example.com/logo.svg`):
 
 ```yaml
 opensearchDashboards.branding:
@@ -288,23 +273,24 @@ opensearchDashboards.branding:
     darkModeUrl: "https://<dashboards-hostname>/ui/assets/branding/mark-dark.svg"
   loadingLogo:
     defaultUrl: "https://<dashboards-hostname>/ui/assets/branding/loading-logo.svg"
+    darkModeUrl: "https://<dashboards-hostname>/ui/assets/branding/loading-logo-dark.svg"
   faviconUrl: "https://<dashboards-hostname>/ui/assets/branding/favicon.svg"
   applicationTitle: "DMARC Dashboards"
+  useExpandedHeader: false
 ```
 
-You can also use a remote URL (e.g., `https://example.com/logo.svg`) instead of hosting files locally.
+`defaultUrl` must be set before `darkModeUrl` will take effect. Omit `darkModeUrl` to use the default image for both themes.
 
 | Property | Purpose |
-| ---------- | --------- |
-| `logo` | Header bar logo (top left) |
-| `mark` | Condensed logo shown when the side nav is collapsed |
-| `loadingLogo` | Splash/loading screen logo |
-| `faviconUrl` | Browser tab icon |
-| `applicationTitle` | Replaces "OpenSearch Dashboards" in the UI |
+| --- | --- |
+| `logo` | Header bar logo (top left). Accepts `defaultUrl` and `darkModeUrl`. |
+| `mark` | Condensed logo shown when the side nav is collapsed. Accepts `defaultUrl` and `darkModeUrl`. |
+| `loadingLogo` | Splash/loading screen logo. Accepts `defaultUrl` and `darkModeUrl`. |
+| `faviconUrl` | Browser tab icon. Single URL (no dark mode variant). |
+| `applicationTitle` | Replaces "OpenSearch Dashboards" text in the header and browser tab. |
+| `useExpandedHeader` | `true` for the traditional two-bar header, `false` for a condensed single-bar layout. |
 
-Each logo property accepts `defaultUrl` and `darkModeUrl`. Omit `darkModeUrl` to use the default for both themes.
-
-### 4. Restart
+### 3. Restart
 
 ```bash
 docker compose restart opensearch-dashboards
