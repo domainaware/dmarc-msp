@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from unittest.mock import patch
 
-
 # --- POST /api/v1/parsedmarc/reload ---
 
 

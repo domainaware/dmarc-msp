@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from tests.test_api.conftest import create_test_client
 
-
 # --- POST /api/v1/tenants/provision ---
 
 

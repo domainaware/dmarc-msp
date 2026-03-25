@@ -9,8 +9,8 @@ from fastapi.testclient import TestClient
 
 from dmarc_msp.api import create_app
 from dmarc_msp.config import (
-    DatabaseConfig,
     DashboardsConfig,
+    DatabaseConfig,
     DNSProviderConfig,
     MSPConfig,
     OpenSearchConfig,

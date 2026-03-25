@@ -6,7 +6,6 @@ from unittest.mock import MagicMock, patch
 
 from tests.test_api.conftest import create_test_client
 
-
 # --- POST /api/v1/clients ---
 
 
