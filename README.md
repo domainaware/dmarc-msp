@@ -223,6 +223,65 @@ When a client's `_dmarc` record sends reports to your MSP's address, report send
 client.example.com._report._dmarc.dmarc.msp-example.com.  TXT  "v=DMARC1"
 ```
 
+## Customizing Dashboard Branding
+
+You can replace the default OpenSearch Dashboards logos, favicon, and application title with your own branding.
+
+### 1. Add your assets
+
+Place your logo files in a local directory (SVG, PNG, or GIF — SVG recommended):
+
+```bash
+mkdir -p deploy/dashboards/branding
+# Add your files: logo.svg, mark.svg, loading-logo.svg, favicon.svg
+```
+
+### 2. Mount the assets
+
+Add a volume mount to the `opensearch-dashboards` service in `docker-compose.yml`:
+
+```yaml
+opensearch-dashboards:
+  volumes:
+    - ./deploy/dashboards/branding/:/usr/share/opensearch-dashboards/custom-branding/:ro
+```
+
+This creates a new directory inside the container — it does not shadow any existing assets.
+
+### 3. Configure branding
+
+Add the following to `deploy/dashboards/opensearch_dashboards.yml`:
+
+```yaml
+opensearchDashboards.branding:
+  logo:
+    defaultUrl: "/usr/share/opensearch-dashboards/custom-branding/logo.svg"
+    darkModeUrl: "/usr/share/opensearch-dashboards/custom-branding/logo-dark.svg"
+  mark:
+    defaultUrl: "/usr/share/opensearch-dashboards/custom-branding/mark.svg"
+    darkModeUrl: "/usr/share/opensearch-dashboards/custom-branding/mark-dark.svg"
+  loadingLogo:
+    defaultUrl: "/usr/share/opensearch-dashboards/custom-branding/loading-logo.svg"
+  faviconUrl: "/usr/share/opensearch-dashboards/custom-branding/favicon.svg"
+  applicationTitle: "DMARC Dashboards"
+```
+
+| Property | Purpose |
+| ---------- | --------- |
+| `logo` | Header bar logo (top left) |
+| `mark` | Condensed logo shown when the side nav is collapsed |
+| `loadingLogo` | Splash/loading screen logo |
+| `faviconUrl` | Browser tab icon |
+| `applicationTitle` | Replaces "OpenSearch Dashboards" in the UI |
+
+Each logo property accepts `defaultUrl` and `darkModeUrl`. Omit `darkModeUrl` to use the default for both themes.
+
+### 4. Restart
+
+```bash
+docker compose restart opensearch-dashboards
+```
+
 ## DNS Providers
 
 Set `dns.provider` in `dmarc-msp.yaml` and configure credentials in `.env`. Then uncomment the matching environment variables in the `dmarc-msp` service in `docker-compose.yml`.

@@ -1,5 +1,6 @@
 .env
 secrets/
+deploy/dashboards/branding/
 !secrets/.gitkeep
 parsedmarc.ini
 dmarc-msp.yaml
