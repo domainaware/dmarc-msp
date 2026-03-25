@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session
 
@@ -54,7 +54,7 @@ class OffboardingService:
                 client.index_prefix, domain_row.domain_name
             )
             domain_row.status = DomainStatus.OFFBOARDED.value
-            domain_row.offboarded_at = datetime.now(timezone.utc)
+            domain_row.offboarded_at = datetime.now(UTC)
 
         # Reload parsedmarc
         self.parsedmarc.reload()
@@ -70,7 +70,7 @@ class OffboardingService:
 
         # Mark client as offboarded
         client.status = "offboarded"
-        client.offboarded_at = datetime.now(timezone.utc)
+        client.offboarded_at = datetime.now(UTC)
 
         self.db.add(
             AuditLogRow(

@@ -1,10 +1,7 @@
 """Tests for parsedmarc YAML mapping service."""
 
-import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock
-
-import yaml
 
 from dmarc_msp.services.parsedmarc import ParsedmarcService
 

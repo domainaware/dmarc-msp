@@ -8,12 +8,12 @@ from datetime import datetime
 from pydantic import BaseModel, Field
 
 
-class ClientStatus(str, enum.Enum):
+class ClientStatus(enum.StrEnum):
     ACTIVE = "active"
     OFFBOARDED = "offboarded"
 
 
-class DomainStatus(str, enum.Enum):
+class DomainStatus(enum.StrEnum):
     PENDING_DNS = "pending_dns"
     ACTIVE = "active"
     OFFBOARDING = "offboarding"

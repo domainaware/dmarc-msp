@@ -40,7 +40,7 @@ class CloudflareDNSProvider(DNSProvider):
         zones = self._client.zones.list(name=zone)
         if not zones.result:
             raise ValueError(f"Zone '{zone}' not found in Cloudflare account")
-        zone_id = zones.result[0].id
+        zone_id = zones.result[0].id  # type: ignore[union-attr]
         self._zone_id_cache[zone] = zone_id
         return zone_id
 
@@ -63,12 +63,13 @@ class CloudflareDNSProvider(DNSProvider):
             content=value,
             ttl=ttl,
         )
-        logger.info("Created TXT record: %s -> %s (id=%s)", name, value, result.id)
+        record_id = result.id  # type: ignore[union-attr]
+        logger.info("Created TXT record: %s -> %s (id=%s)", name, value, record_id)
         return DNSRecord(
             fqdn=f"{name}.{zone}",
             value=value,
             ttl=ttl,
-            record_id=result.id,
+            record_id=record_id,
         )
 
     def delete_txt_record(
@@ -81,7 +82,7 @@ class CloudflareDNSProvider(DNSProvider):
         deleted = False
         for rec in records.result or []:
             if value is None or rec.content == value:
-                self._client.dns.records.delete(rec.id, zone_id=zone_id)
+                self._client.dns.records.delete(rec.id, zone_id=zone_id)  # type: ignore[arg-type]
                 logger.info("Deleted TXT record: %s (id=%s)", name, rec.id)
                 deleted = True
         return deleted
@@ -94,8 +95,8 @@ class CloudflareDNSProvider(DNSProvider):
         return [
             DNSRecord(
                 fqdn=rec.name,
-                value=rec.content,
-                ttl=rec.ttl,
+                value=str(rec.content),
+                ttl=int(rec.ttl or 3600),
                 record_id=rec.id,
             )
             for rec in (records.result or [])

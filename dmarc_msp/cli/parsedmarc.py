@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 import typer
 from rich.console import Console
 
@@ -16,7 +14,7 @@ console = Console()
 
 @app.command()
 def reload(
-    config: Optional[str] = typer.Option(None, "--config", "-c"),
+    config: str | None = typer.Option(None, "--config", "-c"),
 ):
     """Send SIGHUP to parsedmarc to reload configuration."""
     settings = get_settings(config)

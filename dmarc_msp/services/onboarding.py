@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session
 
-from dmarc_msp.db import AuditLogRow, ClientRow, DomainRow, slugify
+from dmarc_msp.db import AuditLogRow, DomainRow
 from dmarc_msp.models import (
     BulkResult,
     ClientStatus,
@@ -137,7 +137,7 @@ class OnboardingService:
         dns_verified = self.dns.verify_authorization_record(domain)
         if dns_verified:
             domain_row.dns_verified = True
-            domain_row.dns_verified_at = datetime.now(timezone.utc)
+            domain_row.dns_verified_at = datetime.now(UTC)
             domain_row.status = DomainStatus.ACTIVE.value
 
         # Audit
@@ -182,7 +182,7 @@ class OnboardingService:
         self.parsedmarc.reload()
 
         domain_row.status = DomainStatus.OFFBOARDED.value
-        domain_row.offboarded_at = datetime.now(timezone.utc)
+        domain_row.offboarded_at = datetime.now(UTC)
 
         self.db.add(
             AuditLogRow(

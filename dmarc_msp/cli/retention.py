@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 import typer
 from rich.console import Console
 
@@ -19,7 +17,7 @@ def cleanup_emails(
     maildir: str = typer.Option(
         "/var/mail/dmarc", "--maildir", help="Path to Maildir"
     ),
-    config: Optional[str] = typer.Option(None, "--config", "-c"),
+    config: str | None = typer.Option(None, "--config", "-c"),
 ):
     """Delete processed email files older than retention.email_days."""
     settings = get_settings(config)
@@ -32,12 +30,13 @@ def cleanup_emails(
 
 @app.command("ensure-default-policy")
 def ensure_default_policy(
-    config: Optional[str] = typer.Option(None, "--config", "-c"),
+    config: str | None = typer.Option(None, "--config", "-c"),
 ):
     """Create or update the default ISM retention policy."""
     settings = get_settings(config)
     svc = RetentionService(settings.opensearch, settings.retention)
     svc.ensure_default_policy()
     console.print(
-        f"Default retention policy ensured ({settings.retention.index_default_days} days)"
+        "Default retention policy ensured"
+        f" ({settings.retention.index_default_days} days)"
     )

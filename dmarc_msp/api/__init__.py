@@ -6,7 +6,14 @@ from fastapi import FastAPI
 
 from dmarc_msp.api.dependencies import lifespan
 from dmarc_msp.api.middleware import IPAllowlistMiddleware
-from dmarc_msp.api.routers import clients, dashboards, domains, parsedmarc, retention, tenants
+from dmarc_msp.api.routers import (
+    clients,
+    dashboards,
+    domains,
+    parsedmarc,
+    retention,
+    tenants,
+)
 from dmarc_msp.config import Settings
 
 

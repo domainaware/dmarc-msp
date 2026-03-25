@@ -4,8 +4,19 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
 
-from dmarc_msp.api.dependencies import ClientServiceDep, DbDep, SettingsDep
-from dmarc_msp.api.schemas import ClientCreate, ClientOffboard, ClientRename, ClientUpdate
+from dmarc_msp.api.dependencies import (
+    ClientServiceDep,
+    DashboardServiceDep,
+    DbDep,
+    OpenSearchServiceDep,
+    SettingsDep,
+)
+from dmarc_msp.api.schemas import (
+    ClientCreate,
+    ClientOffboard,
+    ClientRename,
+    ClientUpdate,
+)
 from dmarc_msp.cli.helpers import get_offboarding_service
 from dmarc_msp.models import ClientInfo
 from dmarc_msp.services.clients import ClientAlreadyExistsError, ClientNotFoundError

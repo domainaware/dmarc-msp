@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Generator
 from contextlib import asynccontextmanager
 from typing import Annotated
 
@@ -29,7 +29,7 @@ def get_settings(request: Request) -> Settings:
     return request.app.state.settings
 
 
-def get_db(request: Request) -> Session:
+def get_db(request: Request) -> Generator[Session]:
     session = request.app.state.session_factory()
     try:
         yield session

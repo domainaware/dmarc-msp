@@ -3,7 +3,6 @@
 import pytest
 from sqlalchemy.orm import Session
 
-from dmarc_msp.models import ClientStatus
 from dmarc_msp.services.clients import (
     ClientAlreadyExistsError,
     ClientNotFoundError,

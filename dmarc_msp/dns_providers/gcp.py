@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import os
 from pathlib import Path
+from typing import Any
 
 from dmarc_msp.dns_providers.base import DNSProvider, DNSRecord
 
@@ -18,7 +19,7 @@ class GCPDNSProvider(DNSProvider):
 
     def __init__(self, project: str, managed_zone: str | None = None):
         try:
-            from google.cloud import dns as gdns
+            from google.cloud import dns as gdns  # type: ignore[reportMissingImports]
         except ImportError as e:
             raise ImportError(
                 "Install the 'gcp' extra: pip install dmarc-msp[gcp]"
@@ -33,7 +34,7 @@ class GCPDNSProvider(DNSProvider):
 
         self._dns_client = gdns.Client(project=project)
         self._managed_zone_name = managed_zone
-        self._zone_cache: dict[str, object] = {}
+        self._zone_cache: dict[str, Any] = {}
 
     def _get_zone(self, zone: str):
         if zone in self._zone_cache:

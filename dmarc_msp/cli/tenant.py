@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 import typer
 from rich.console import Console
 
@@ -18,7 +16,7 @@ console = Console()
 @app.command()
 def provision(
     client: str = typer.Option(..., "--client", help="Client name"),
-    config: Optional[str] = typer.Option(None, "--config", "-c"),
+    config: str | None = typer.Option(None, "--config", "-c"),
 ):
     """Provision an OpenSearch tenant and role for a client."""
     settings = get_settings(config)
@@ -40,7 +38,7 @@ def provision(
 @app.command()
 def deprovision(
     client: str = typer.Option(..., "--client", help="Client name"),
-    config: Optional[str] = typer.Option(None, "--config", "-c"),
+    config: str | None = typer.Option(None, "--config", "-c"),
 ):
     """Deprovision an OpenSearch tenant and role for a client."""
     settings = get_settings(config)

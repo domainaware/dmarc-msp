@@ -2,26 +2,37 @@
 
 from __future__ import annotations
 
+from collections.abc import Generator
+
 import pytest
 from sqlalchemy.orm import Session
 
-from dmarc_msp.config import Settings
-from dmarc_msp.db import Base, init_db
+from dmarc_msp.config import (
+    DatabaseConfig,
+    DNSProviderConfig,
+    MSPConfig,
+    OpenSearchConfig,
+    Settings,
+)
+from dmarc_msp.db import init_db
 
 
 @pytest.fixture
 def settings() -> Settings:
     """Return test settings with an in-memory SQLite database."""
     return Settings(
-        database={"url": "sqlite:///:memory:"},
-        opensearch={"password": "test_password"},
-        msp={"domain": "dmarc.test.example.com", "rua_email": "reports@dmarc.test.example.com"},
-        dns={"provider": "cloudflare", "zone": "test.example.com"},
+        database=DatabaseConfig(url="sqlite:///:memory:"),
+        opensearch=OpenSearchConfig(password="test_password"),
+        msp=MSPConfig(
+            domain="dmarc.test.example.com",
+            rua_email="reports@dmarc.test.example.com",
+        ),
+        dns=DNSProviderConfig(provider="cloudflare", zone="test.example.com"),
     )
 
 
 @pytest.fixture
-def db_session(settings: Settings) -> Session:
+def db_session(settings: Settings) -> Generator[Session]:
     """Create an in-memory database session for testing."""
     session_factory = init_db(settings.database.url)
     session = session_factory()

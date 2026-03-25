@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 import typer
 from rich.console import Console
 from rich.table import Table
@@ -25,11 +23,11 @@ console = Console()
 @app.command()
 def create(
     name: str = typer.Argument(..., help="Client name"),
-    contact: Optional[str] = typer.Option(None, "--contact", help="Contact email"),
-    index_prefix: Optional[str] = typer.Option(None, "--index-prefix"),
-    retention_days: Optional[int] = typer.Option(None, "--retention-days"),
-    notes: Optional[str] = typer.Option(None, "--notes"),
-    config: Optional[str] = typer.Option(None, "--config", "-c"),
+    contact: str | None = typer.Option(None, "--contact", help="Contact email"),
+    index_prefix: str | None = typer.Option(None, "--index-prefix"),
+    retention_days: int | None = typer.Option(None, "--retention-days"),
+    notes: str | None = typer.Option(None, "--notes"),
+    config: str | None = typer.Option(None, "--config", "-c"),
 ):
     """Create a new client."""
     settings = get_settings(config)
@@ -52,7 +50,7 @@ def create(
             os_svc = OpenSearchService(settings.opensearch)
             os_svc.provision_tenant(client.tenant_name)
             os_svc.create_client_role(client.tenant_name, client.index_prefix)
-            console.print(f"  OpenSearch:   tenant + role provisioned")
+            console.print("  OpenSearch:   tenant + role provisioned")
 
             if client.retention_days:
                 ret_svc = RetentionService(settings.opensearch, settings.retention)
@@ -62,7 +60,7 @@ def create(
 
             dash_svc = DashboardService(settings.dashboards, settings.opensearch)
             dash_svc.import_for_client(client.tenant_name, client.index_prefix)
-            console.print(f"  Dashboards:   imported")
+            console.print("  Dashboards:   imported")
         except Exception as e:
             console.print(
                 f"  [yellow]Warning:[/yellow] OpenSearch provisioning failed: {e}"
@@ -81,7 +79,7 @@ def create(
 @app.command("list")
 def list_clients(
     all: bool = typer.Option(False, "--all", help="Include offboarded clients"),
-    config: Optional[str] = typer.Option(None, "--config", "-c"),
+    config: str | None = typer.Option(None, "--config", "-c"),
 ):
     """List all clients."""
     settings = get_settings(config)
@@ -117,7 +115,7 @@ def list_clients(
 @app.command()
 def show(
     name: str = typer.Argument(..., help="Client name"),
-    config: Optional[str] = typer.Option(None, "--config", "-c"),
+    config: str | None = typer.Option(None, "--config", "-c"),
 ):
     """Show full client status."""
     settings = get_settings(config)
@@ -161,10 +159,10 @@ def show(
 @app.command()
 def update(
     name: str = typer.Argument(..., help="Client name"),
-    contact: Optional[str] = typer.Option(None, "--contact"),
-    notes: Optional[str] = typer.Option(None, "--notes"),
-    retention_days: Optional[int] = typer.Option(None, "--retention-days"),
-    config: Optional[str] = typer.Option(None, "--config", "-c"),
+    contact: str | None = typer.Option(None, "--contact"),
+    notes: str | None = typer.Option(None, "--notes"),
+    retention_days: int | None = typer.Option(None, "--retention-days"),
+    config: str | None = typer.Option(None, "--config", "-c"),
 ):
     """Update client details."""
     settings = get_settings(config)
@@ -191,7 +189,7 @@ def update(
 def rename(
     name: str = typer.Argument(..., help="Current client name"),
     new_name: str = typer.Option(..., "--new-name", help="New client name"),
-    config: Optional[str] = typer.Option(None, "--config", "-c"),
+    config: str | None = typer.Option(None, "--config", "-c"),
 ):
     """Rename a client. Index prefix and tenant name stay the same."""
     settings = get_settings(config)
@@ -215,7 +213,7 @@ def offboard(
     name: str = typer.Argument(..., help="Client name"),
     purge_indices: bool = typer.Option(False, "--purge-indices"),
     dry_run: bool = typer.Option(False, "--dry-run"),
-    config: Optional[str] = typer.Option(None, "--config", "-c"),
+    config: str | None = typer.Option(None, "--config", "-c"),
 ):
     """Offboard a client (remove DNS, deprovision tenant)."""
     settings = get_settings(config)

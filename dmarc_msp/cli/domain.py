@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 import typer
 from rich.console import Console
 from rich.table import Table
@@ -24,7 +22,7 @@ console = Console()
 def add(
     client: str = typer.Option(..., "--client", help="Client name"),
     domain: str = typer.Option(..., "--domain", help="Domain to add"),
-    config: Optional[str] = typer.Option(None, "--config", "-c"),
+    config: str | None = typer.Option(None, "--config", "-c"),
 ):
     """Add a domain to a client."""
     settings = get_settings(config)
@@ -46,7 +44,7 @@ def add(
 def remove(
     domain: str = typer.Option(..., "--domain", help="Domain to remove"),
     keep_dns: bool = typer.Option(False, "--keep-dns", help="Keep DNS records"),
-    config: Optional[str] = typer.Option(None, "--config", "-c"),
+    config: str | None = typer.Option(None, "--config", "-c"),
 ):
     """Remove a domain from monitoring."""
     settings = get_settings(config)
@@ -68,7 +66,7 @@ def remove(
 def move(
     domain: str = typer.Option(..., "--domain", help="Domain to move"),
     to: str = typer.Option(..., "--to", help="Destination client name"),
-    config: Optional[str] = typer.Option(None, "--config", "-c"),
+    config: str | None = typer.Option(None, "--config", "-c"),
 ):
     """Move a domain to a different client."""
     settings = get_settings(config)
@@ -90,7 +88,7 @@ def move(
 @app.command()
 def verify(
     domain: str = typer.Option(..., "--domain", help="Domain to verify"),
-    config: Optional[str] = typer.Option(None, "--config", "-c"),
+    config: str | None = typer.Option(None, "--config", "-c"),
 ):
     """Verify DNS propagation for a domain's authorization record."""
     settings = get_settings(config)
@@ -114,8 +112,8 @@ def verify(
 
 @app.command("list")
 def list_domains(
-    client: Optional[str] = typer.Option(None, "--client", help="Filter by client"),
-    config: Optional[str] = typer.Option(None, "--config", "-c"),
+    client: str | None = typer.Option(None, "--client", help="Filter by client"),
+    config: str | None = typer.Option(None, "--config", "-c"),
 ):
     """List monitored domains."""
     settings = get_settings(config)
@@ -153,7 +151,7 @@ def list_domains(
 def bulk_add(
     client: str = typer.Option(..., "--client"),
     file: str = typer.Option(..., "--file", help="File with one domain per line"),
-    config: Optional[str] = typer.Option(None, "--config", "-c"),
+    config: str | None = typer.Option(None, "--config", "-c"),
 ):
     """Bulk-add domains from a file."""
     settings = get_settings(config)
@@ -177,7 +175,7 @@ def bulk_add(
 @app.command("bulk-remove")
 def bulk_remove(
     file: str = typer.Option(..., "--file"),
-    config: Optional[str] = typer.Option(None, "--config", "-c"),
+    config: str | None = typer.Option(None, "--config", "-c"),
 ):
     """Bulk-remove domains from a file."""
     settings = get_settings(config)
@@ -200,7 +198,7 @@ def bulk_remove(
 def bulk_move(
     to: str = typer.Option(..., "--to"),
     file: str = typer.Option(..., "--file"),
-    config: Optional[str] = typer.Option(None, "--config", "-c"),
+    config: str | None = typer.Option(None, "--config", "-c"),
 ):
     """Bulk-move domains from a file to a different client."""
     settings = get_settings(config)

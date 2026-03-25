@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 import typer
 from rich.console import Console
 
@@ -18,7 +16,7 @@ console = Console()
 @app.command("import")
 def import_dashboards(
     client: str = typer.Option(..., "--client", help="Client name"),
-    config: Optional[str] = typer.Option(None, "--config", "-c"),
+    config: str | None = typer.Option(None, "--config", "-c"),
 ):
     """Import dashboards into a client's tenant."""
     settings = get_settings(config)
@@ -41,7 +39,7 @@ def import_dashboards(
 
 @app.command("import-all")
 def import_all_dashboards(
-    config: Optional[str] = typer.Option(None, "--config", "-c"),
+    config: str | None = typer.Option(None, "--config", "-c"),
 ):
     """Re-import dashboards into every active client's tenant."""
     settings = get_settings(config)

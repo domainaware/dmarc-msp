@@ -3,12 +3,11 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
 
-from dmarc_msp.db import AuditLogRow, ClientRow, DomainRow, slugify
-from dmarc_msp.models import ClientInfo, ClientStatus, DomainStatus
+from dmarc_msp.db import AuditLogRow, ClientRow, slugify
+from dmarc_msp.models import ClientInfo, ClientStatus
 
 logger = logging.getLogger(__name__)
 
