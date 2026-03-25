@@ -41,50 +41,57 @@ class OffboardingService:
         purge_dns: bool = True,
         purge_indices: bool = False,
     ) -> OffboardingResult:
-        """Full client offboarding."""
+        """Full client offboarding.
+
+        Transactional — rolls back on failure.
+        """
         client = self.client_service.get(client_name)
         active_domains = client.active_domains
         domains_removed = len(active_domains)
 
-        # Remove DNS records and YAML mappings for all active domains
-        for domain_row in active_domains:
-            if purge_dns:
-                self.dns.delete_authorization_record(domain_row.domain_name)
-            self.parsedmarc.remove_domain_mapping(
-                client.index_prefix, domain_row.domain_name
+        try:
+            # Remove DNS records and YAML mappings for all active domains
+            for domain_row in active_domains:
+                if purge_dns:
+                    self.dns.delete_authorization_record(domain_row.domain_name)
+                self.parsedmarc.remove_domain_mapping(
+                    client.index_prefix, domain_row.domain_name
+                )
+                domain_row.status = DomainStatus.OFFBOARDED.value
+                domain_row.offboarded_at = datetime.now(UTC)
+
+            # Reload parsedmarc
+            self.parsedmarc.reload()
+
+            # Deprovision OpenSearch tenant + role
+            self.opensearch.deprovision_tenant(client.tenant_name)
+            self.opensearch.delete_client_role(client.tenant_name)
+            self.retention.delete_client_policy(client.index_prefix)
+
+            # Optionally purge data indices
+            if purge_indices:
+                self.opensearch.delete_client_indices(client.index_prefix)
+
+            # Mark client as offboarded
+            client.status = "offboarded"
+            client.offboarded_at = datetime.now(UTC)
+
+            self.db.add(
+                AuditLogRow(
+                    client_id=client.id,
+                    action="client_offboard",
+                    detail={
+                        "domains_removed": domains_removed,
+                        "purge_dns": purge_dns,
+                        "purge_indices": purge_indices,
+                    },
+                    success=True,
+                )
             )
-            domain_row.status = DomainStatus.OFFBOARDED.value
-            domain_row.offboarded_at = datetime.now(UTC)
-
-        # Reload parsedmarc
-        self.parsedmarc.reload()
-
-        # Deprovision OpenSearch tenant + role
-        self.opensearch.deprovision_tenant(client.tenant_name)
-        self.opensearch.delete_client_role(client.tenant_name)
-        self.retention.delete_client_policy(client.index_prefix)
-
-        # Optionally purge data indices
-        if purge_indices:
-            self.opensearch.delete_client_indices(client.index_prefix)
-
-        # Mark client as offboarded
-        client.status = "offboarded"
-        client.offboarded_at = datetime.now(UTC)
-
-        self.db.add(
-            AuditLogRow(
-                client_id=client.id,
-                action="client_offboard",
-                detail={
-                    "domains_removed": domains_removed,
-                    "purge_dns": purge_dns,
-                    "purge_indices": purge_indices,
-                },
-                success=True,
-            )
-        )
-        self.db.commit()
+            self.db.commit()
+        except Exception:
+            self.db.rollback()
+            raise
 
         return OffboardingResult(
             client_name=client.name,

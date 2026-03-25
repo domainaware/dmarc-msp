@@ -274,6 +274,97 @@ def test_bulk_import_handles_errors(db_session: Session, tmp_path):
     assert "DNS failure" in result.failed[0][1]
 
 
+def test_add_domain_rolls_back_on_dns_failure(db_session: Session):
+    svc, client_svc = _make_service(db_session)
+    client_svc.create("Acme Corp")
+    svc.dns.create_authorization_record.side_effect = RuntimeError("DNS error")
+
+    with pytest.raises(RuntimeError, match="DNS error"):
+        svc.add_domain("Acme Corp", "acme.com")
+
+    # Domain should not be in the DB
+    from dmarc_msp.db import DomainRow
+
+    domains = db_session.query(DomainRow).all()
+    assert len(domains) == 0
+
+
+def test_add_domain_rolls_back_client_on_dns_failure(db_session: Session):
+    svc, client_svc = _make_service(db_session)
+    svc.dns.create_authorization_record.side_effect = RuntimeError("DNS error")
+
+    with pytest.raises(RuntimeError, match="DNS error"):
+        svc.add_domain("NewClient", "acme.com")
+
+    # Auto-created client should be rolled back
+    clients = client_svc.list()
+    assert len(clients) == 0
+
+
+def test_add_domain_rolls_back_on_parsedmarc_failure(db_session: Session):
+    svc, client_svc = _make_service(db_session)
+    client_svc.create("Acme Corp")
+    svc.parsedmarc.add_domain_mapping.side_effect = IsADirectoryError(
+        "[Errno 21] Is a directory: '/etc/parsedmarc_domain_map.yaml'"
+    )
+
+    with pytest.raises(IsADirectoryError):
+        svc.add_domain("Acme Corp", "acme.com")
+
+    from dmarc_msp.db import DomainRow
+
+    domains = db_session.query(DomainRow).all()
+    assert len(domains) == 0
+
+
+def test_add_domain_rolls_back_on_opensearch_failure(db_session: Session):
+    svc, client_svc = _make_service(db_session)
+    client_svc.create("Acme Corp")
+    svc.opensearch.provision_tenant.side_effect = ConnectionError(
+        "Name does not resolve"
+    )
+
+    with pytest.raises(ConnectionError):
+        svc.add_domain("Acme Corp", "acme.com")
+
+    from dmarc_msp.db import DomainRow
+
+    domains = db_session.query(DomainRow).all()
+    assert len(domains) == 0
+
+
+def test_add_domain_rolls_back_on_dashboard_import_failure(db_session: Session):
+    svc, client_svc = _make_service(db_session)
+    client_svc.create("Acme Corp")
+    svc.dashboards.import_for_client.side_effect = RuntimeError(
+        "Name does not resolve"
+    )
+
+    with pytest.raises(RuntimeError):
+        svc.add_domain("Acme Corp", "acme.com")
+
+    from dmarc_msp.db import DomainRow
+
+    domains = db_session.query(DomainRow).all()
+    assert len(domains) == 0
+
+
+def test_remove_domain_rolls_back_on_failure(db_session: Session):
+    svc, client_svc = _make_service(db_session)
+    client_svc.create("Acme Corp")
+    svc.add_domain("Acme Corp", "acme.com")
+
+    svc.dns.delete_authorization_record.side_effect = RuntimeError("DNS error")
+    with pytest.raises(RuntimeError, match="DNS error"):
+        svc.remove_domain("acme.com")
+
+    # Domain should still be active
+    from dmarc_msp.db import DomainRow
+
+    domain = db_session.query(DomainRow).filter_by(domain_name="acme.com").one()
+    assert domain.status != "offboarded"
+
+
 def test_parse_domain_file_deduplicates(db_session: Session, tmp_path):
     svc, _ = _make_service(db_session)
     domain_file = tmp_path / "domains.txt"

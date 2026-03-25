@@ -31,8 +31,13 @@ class ClientService:
         index_prefix: str | None = None,
         notes: str | None = None,
         retention_days: int | None = None,
+        commit: bool = True,
     ) -> ClientRow:
-        """Create a new client."""
+        """Create a new client.
+
+        Set commit=False to defer the commit to the caller (e.g., when
+        the creation is part of a larger transaction).
+        """
         name_lower = name.lower().strip()
         slug = slugify(name)
         index_prefix = (index_prefix or slug).lower().strip()
@@ -53,7 +58,10 @@ class ClientService:
                     if retention_days is not None
                     else existing.retention_days
                 )
-                self.db.commit()
+                if commit:
+                    self.db.commit()
+                else:
+                    self.db.flush()
                 self.db.refresh(existing)
                 logger.info("Reactivated client: %s", name_lower)
                 return existing
@@ -69,7 +77,10 @@ class ClientService:
         )
         self.db.add(client)
         self._audit("client_create", client_row=client)
-        self.db.commit()
+        if commit:
+            self.db.commit()
+        else:
+            self.db.flush()
         self.db.refresh(client)
         logger.info("Created client: %s (prefix=%s)", name_lower, index_prefix)
         return client
