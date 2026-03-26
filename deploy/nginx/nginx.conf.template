@@ -15,6 +15,8 @@ http {
     sendfile on;
     keepalive_timeout 65;
 
+    include /etc/nginx/conf.d/*.conf;
+
     # Rate limiting for login endpoints — 5 attempts per minute per IP
     limit_req_zone $binary_remote_addr zone=login:10m rate=5r/m;
 
@@ -25,10 +27,6 @@ http {
 
         location /.well-known/acme-challenge/ {
             root /var/www/certbot;
-        }
-
-        location /.well-known/ {
-            root /var/www/well-known;
         }
 
         location / {
@@ -51,10 +49,6 @@ http {
         ssl_session_timeout 1d;
 
         add_header Strict-Transport-Security "max-age=63072000; includeSubDomains" always;
-
-        location /.well-known/ {
-            root /var/www/well-known;
-        }
 
         # Resolve upstreams at request time via Docker's embedded DNS so
         # nginx can reload before opensearch-dashboards is running.

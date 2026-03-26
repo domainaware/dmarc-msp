@@ -112,21 +112,13 @@ services:
     volumes:
       - certs:/etc/letsencrypt
       - certbot-webroot:/var/www/certbot
+      - ./deploy/certbot/entrypoint.sh:/entrypoint.sh:ro
       - /var/run/docker.sock:/var/run/docker.sock
       - /usr/bin/docker:/usr/bin/docker:ro
     environment:
       - MSP_DOMAIN=${MSP_DOMAIN:-dmarc.msp-example.com}
       - CERTBOT_EMAIL=${CERTBOT_EMAIL:-}
-    entrypoint: >
-      sh -c 'trap exit TERM;
-      if [ ! -f /etc/letsencrypt/live/$MSP_DOMAIN/fullchain.pem ]; then
-        echo "No certificate found — requesting initial cert";
-        certbot certonly --webroot -w /var/www/certbot -d $MSP_DOMAIN --non-interactive --agree-tos --email $CERTBOT_EMAIL;
-      fi;
-      while :; do
-        certbot renew --quiet --deploy-hook "docker kill -s HUP parsedmarc-nginx && docker kill -s HUP parsedmarc-postfix";
-        sleep 12h & wait $${!};
-      done'
+    entrypoint: ["/bin/sh", "/entrypoint.sh"]
     healthcheck:
       test: ["CMD-SHELL", "test -f /etc/letsencrypt/live/${MSP_DOMAIN:-dmarc.msp-example.com}/fullchain.pem"]
       interval: 5s

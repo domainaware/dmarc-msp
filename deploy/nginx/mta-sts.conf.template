@@ -1,0 +1,42 @@
+# MTA-STS policy server — auto-enabled when mta-sts.${MSP_DOMAIN} has DNS records
+
+# HTTP — ACME challenges + redirect to HTTPS
+server {
+    listen 80;
+    server_name mta-sts.${MSP_DOMAIN};
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+# HTTPS — serve .well-known/mta-sts.txt
+server {
+    listen 443 ssl;
+    server_name mta-sts.${MSP_DOMAIN};
+
+    ssl_certificate /etc/letsencrypt/live/mta-sts.${MSP_DOMAIN}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/mta-sts.${MSP_DOMAIN}/privkey.pem;
+
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384;
+    ssl_prefer_server_ciphers off;
+    ssl_session_cache shared:MTA_STS_SSL:1m;
+    ssl_session_timeout 1d;
+
+    add_header Strict-Transport-Security "max-age=63072000; includeSubDomains" always;
+
+    root /var/www/well-known;
+
+    location = /.well-known/mta-sts.txt {
+        default_type text/plain;
+    }
+
+    location / {
+        return 404;
+    }
+}

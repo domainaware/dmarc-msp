@@ -15,6 +15,8 @@ http {
     sendfile on;
     keepalive_timeout 65;
 
+    include /etc/nginx/conf.d/*.conf;
+
     # HTTP only — serves ACME challenges while waiting for certbot
     server {
         listen 80;
@@ -22,10 +24,6 @@ http {
 
         location /.well-known/acme-challenge/ {
             root /var/www/certbot;
-        }
-
-        location /.well-known/ {
-            root /var/www/well-known;
         }
 
         location / {

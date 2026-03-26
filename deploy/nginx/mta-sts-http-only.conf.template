@@ -1,0 +1,15 @@
+# MTA-STS — HTTP-only while waiting for certbot to obtain the certificate
+
+server {
+    listen 80;
+    server_name mta-sts.${MSP_DOMAIN};
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location / {
+        return 503 "Waiting for TLS certificate — try again shortly.\n";
+        default_type text/plain;
+    }
+}
