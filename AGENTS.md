@@ -117,6 +117,7 @@ A domain can only belong to one client at a time. Offboarded domains can be re-a
 - **Slugification** — `db.slugify()` converts client names to index prefixes (e.g., "Acme Corp" → "acme_corp").
 - **Client create provisions OpenSearch** — the CLI and API both create the tenant, role, and import dashboards when creating a client.
 - **Client rename** — changes display name only. `index_prefix` and `tenant_name` are immutable after creation.
+- **parsedmarc is a separate project** — parsedmarc has its own config format, CLI flags, and environment variables (`PARSEDMARC_*`). Do not confuse parsedmarc's config keys (e.g., `user`, `hosts`) with this project's config classes (e.g., `OpenSearchConfig.username`, `OpenSearchConfig.hosts`). When configuring parsedmarc env vars in `docker-compose.yml`, always refer to parsedmarc's own documentation at https://domainaware.github.io/parsedmarc/usage.html, not this project's code.
 - **Secrets** — most go in `.env` as env vars. GCP is the only provider using a Docker secret file. Never put secrets in config YAML or docker-compose.yml.
 - **Postfix** — custom receive-only container (not a relay image). Accepts mail for one address only, delivers to Maildir.
 - **nginx** — reverse proxy in front of Dashboards. Dashboards serves plain HTTP internally on port 5601; nginx terminates TLS.
