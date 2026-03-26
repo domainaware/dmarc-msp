@@ -22,6 +22,7 @@ local     unix  -       n       n       -       -       local
 virtual   unix  -       n       n       -       -       virtual
 lmtp      unix  -       -       n       -       -       lmtp
 anvil     unix  -       -       n       -       1       anvil
+proxymap  unix  -       -       n       -       -       proxymap
 scache    unix  -       -       n       -       1       scache
 discard   unix  -       -       n       -       -       discard
 postlog   unix-dgram n  -       n       -       1       postlogd
