@@ -118,13 +118,10 @@ dashboards:
 # parsedmarc integration
 # ---------------------------------------------------------------------------
 parsedmarc:
-  # Path to parsedmarc's INI config file (informational — not modified
-  # by dmarc-msp, but referenced in documentation and validation).
-  config_file: /etc/parsedmarc.ini
-
   # Path to the YAML domain-to-index-prefix mapping file. This file is
   # read and written by dmarc-msp to route reports to per-client indices.
-  # parsedmarc reads it via the index_prefix_domain_map INI setting.
+  # parsedmarc reads it via the PARSEDMARC_GENERAL_INDEX_PREFIX_DOMAIN_MAP
+  # environment variable in docker-compose.yml.
   domain_map_file: /etc/parsedmarc_domain_map.yaml
 
   # Docker container name for parsedmarc. Used to send SIGHUP for

@@ -63,13 +63,14 @@ cd dmarc-msp
 cp .env.example .env
 cp dmarc-msp.example.yaml dmarc-msp.yaml
 chmod 600 .env
+chmod 644 dmarc-msp.yaml
+chmod 700 secrets/
+# After you have added any file under secrets, run
+find secrets/ -type f -exec chmod 600 {} +
 
 # Set your MSP domain, certbot email, OpenSearch password, and DNS provider credentials
 # (see DNS Providers section for which env vars your provider needs)
 $EDITOR .env
-
-# Set the same OpenSearch password here (replace CHANGEME)
-$EDITOR parsedmarc.ini
 
 # Initialize the domain map (empty file — dmarc-msp will populate it)
 touch domain_map.yaml
@@ -339,15 +340,16 @@ Then follow the [Quick Start](#quick-start) configuration steps (copy templates,
 ```bash
 cd /opt/dmarc-msp
 sudo -u dmarc-msp cp .env.example .env
-sudo -u dmarc-msp cp parsedmarc.example.ini parsedmarc.ini
 sudo -u dmarc-msp cp dmarc-msp.example.yaml dmarc-msp.yaml
 sudo -u dmarc-msp touch domain_map.yaml
-sudo -u dmarc-msp chmod 600 .env parsedmarc.ini dmarc-msp.yaml
+sudo -u dmarc-msp chmod 600 .env
+sudo -u dmarc-msp chmod 644 dmarc-msp.yaml
 sudo -u dmarc-msp chmod 700 secrets/
 # After you have added any file under secrets, run
 sudo -u dmarc-msp find secrets/ -type f -exec chmod 600 {} +
 # Edit each configuration file
 sudo -u dmarc-msp $EDITOR .env
+sudo -u dmarc-msp $EDITOR dmarc-msp.yaml
 ```
 
 ### systemd service
@@ -415,7 +417,7 @@ docker compose down -v
 docker compose up --build -d
 ```
 
-The `-v` flag removes named volumes, which deletes all OpenSearch indices, the SQLite database, and the Maildir. The stack recreates them empty on startup. Configuration files (`.env`, `parsedmarc.ini`, `dmarc-msp.yaml`) are bind-mounted and are not affected.
+The `-v` flag removes named volumes, which deletes all OpenSearch indices, the SQLite database, and the Maildir. The stack recreates them empty on startup. Configuration files (`.env`, `dmarc-msp.yaml`) are bind-mounted and are not affected.
 
 ## Architecture
 
@@ -534,7 +536,7 @@ The application resolves secrets in priority order: environment variable > Docke
 
 - `.env` — Docker Compose environment variables (passwords, API tokens)
 - `secrets/` — Docker secret files (GCP key)
-- `parsedmarc.ini` — contains the OpenSearch password
+- `parsedmarc.ini` — legacy config file (no longer required; parsedmarc is now configured via environment variables in `docker-compose.yml`)
 - `dmarc-msp.yaml` — local config
 - `domain_map.yaml` — auto-managed, contains client domain mappings
 - `*.db` — SQLite database (client list, audit trail)
@@ -582,7 +584,7 @@ Clients authenticate to Dashboards, not to OpenSearch directly. The `kibanaserve
 - **Use a strong OpenSearch admin password** — OpenSearch requires uppercase, lowercase, digits, and at least one special character. A quick way to generate one is to run: `tr -dc 'A-Za-z0-9@#$%&*+=' < /dev/urandom | head -c 32 && echo`. The `admin` username is hardcoded by OpenSearch and cannot be changed.
 - **Restrict Docker socket access** on the host. Consider using a Docker socket proxy like [Tecnativa/docker-socket-proxy](https://github.com/Tecnativa/docker-socket-proxy) to limit containers to only the endpoints they need.
 - **Enable a firewall** — only ports 25, 80, 443, and 587 need to be open to the internet. Port 8000 should never be exposed beyond localhost.
-- **Rotate secrets** by updating `.env` and `parsedmarc.ini`, then restarting affected services. No code changes required.
+- **Rotate secrets** by updating `.env` and restarting affected services. No code changes required.
 - **Monitor the audit log** — every onboarding, offboarding, and provisioning action is recorded with timestamps in the `audit_log` table.
 - **Keep images updated** — pin OpenSearch and parsedmarc to specific versions in `docker-compose.yml` and update deliberately.
 

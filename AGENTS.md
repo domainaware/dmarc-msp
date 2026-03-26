@@ -170,7 +170,7 @@ These are in `.gitignore` — never generate or suggest committing them:
 
 - `.env` — Docker Compose env vars (contains passwords and API tokens)
 - `secrets/` — Docker secret files (GCP key)
-- `parsedmarc.ini` — contains OpenSearch password
+- `parsedmarc.ini` — legacy config (no longer required; parsedmarc uses env vars in docker-compose.yml)
 - `dmarc-msp.yaml` — local config (use `dmarc-msp.example.yaml` as template)
 - `domain_map.yaml` — auto-managed by the service layer
 - `*.db` — SQLite database
