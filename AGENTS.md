@@ -47,7 +47,8 @@ dmarc_msp/
 │   ├── tenant.py       # tenant provision/deprovision
 │   ├── dashboard.py    # dashboard import / import-all
 │   ├── retention.py    # retention cleanup-emails/ensure-default-policy
-│   └── parsedmarc.py   # parsedmarc reload
+│   ├── parsedmarc.py   # parsedmarc reload
+│   └── server.py       # serve command (API server)
 └── api/                # FastAPI management API
     ├── dependencies.py # DI (settings, db session, services)
     ├── middleware.py    # IP allowlist
@@ -62,11 +63,14 @@ deploy/
 │   └── entrypoint.sh   # TLS detection, envsubst, Maildir setup
 ├── nginx/              # TLS-terminating reverse proxy
 │   ├── Dockerfile      # nginx:alpine
-│   ├── nginx.conf.template        # Full HTTPS config
-│   ├── nginx-http-only.conf.template # Bootstrap config (no certs yet)
-│   └── entrypoint.sh   # Cert detection, auto-reload when certs appear
+│   ├── nginx.conf.template              # Full HTTPS config
+│   ├── nginx-http-only.conf.template    # Bootstrap config (no certs yet)
+│   ├── mta-sts.conf.template            # MTA-STS HTTPS server block
+│   ├── mta-sts-http-only.conf.template  # MTA-STS bootstrap (ACME only)
+│   └── entrypoint.sh   # Cert detection, MTA-STS DNS check, auto-reload
 ├── certbot/            # Let's Encrypt config
-│   └── cli.ini
+│   ├── cli.ini         # Certbot defaults (webroot, agree-tos)
+│   └── entrypoint.sh   # Cert requests (main + conditional MTA-STS), renewal loop
 ├── opensearch/         # OpenSearch node config
 │   └── opensearch.yml
 └── dashboards/         # Dashboards config

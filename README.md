@@ -250,6 +250,29 @@ When a client's `_dmarc` record sends reports to your MSP's address, report send
 client.example.com._report._dmarc.dmarc.msp-example.com.  TXT  "v=DMARC1"
 ```
 
+### MTA-STS Policy Hosting
+
+[MTA-STS](https://datatracker.ietf.org/doc/html/rfc8461) lets your MSP domain advertise a strict TLS policy for inbound SMTP. The policy file must be served at `https://mta-sts.<your-domain>/.well-known/mta-sts.txt`.
+
+The stack automatically detects the `mta-sts` subdomain and handles TLS for it — no config changes needed:
+
+1. **Create a DNS A/AAAA record** for `mta-sts.<your-domain>` pointing to the same server.
+
+2. **Add your policy file** to `.well-known/mta-sts.txt`:
+
+   ```text
+   version: STSv1
+   mode: enforce
+   mx: <your-domain>
+   max_age: 86400
+   ```
+
+3. **Restart the stack** — `docker compose up --build -d`
+
+On startup, both nginx and certbot check whether `mta-sts.<MSP_DOMAIN>` resolves. If it does, certbot obtains a separate Let's Encrypt certificate for the subdomain, and nginx begins serving the policy file over HTTPS. If the DNS record doesn't exist, the feature is silently skipped.
+
+The `.well-known/` directory is gitignored (except for a `.gitkeep`), so the policy file stays local to each deployment.
+
 ## Customizing Dashboard Branding
 
 You can replace the default OpenSearch Dashboards logos, favicon, and application title with your own branding. The `deploy/dashboards/branding/` directory and volume mount are preconfigured.
@@ -443,8 +466,8 @@ dmarc-msp/
 │   └── api/                   # FastAPI management API
 ├── deploy/
 │   ├── postfix/               # Custom receive-only Postfix container
-│   ├── nginx/                 # TLS-terminating reverse proxy
-│   ├── certbot/               # Certbot defaults
+│   ├── nginx/                 # TLS-terminating reverse proxy + MTA-STS
+│   ├── certbot/               # Let's Encrypt cert management + MTA-STS
 │   ├── opensearch/            # OpenSearch node config
 │   └── dashboards/            # Dashboards config
 ├── docker-compose.yml         # Full production stack
