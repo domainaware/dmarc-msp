@@ -14,7 +14,7 @@ from dmarc_msp.cli.tenant import app as tenant_app
 
 app = typer.Typer(
     name="dmarcmsp",
-    help="DMARC monitoring automation for " \
+    help="DMARC monitoring automation for "
     "Managed Service Providers (and everyone else).",
     no_args_is_help=True,
 )

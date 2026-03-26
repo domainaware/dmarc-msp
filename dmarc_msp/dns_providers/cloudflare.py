@@ -30,9 +30,7 @@ class CloudflareDNSProvider(DNSProvider):
         secret_path = Path("/run/secrets/cloudflare_api_token")
         if secret_path.exists():
             return secret_path.read_text().strip()
-        raise ValueError(
-            "Cloudflare API token not found in env or /run/secrets/"
-        )
+        raise ValueError("Cloudflare API token not found in env or /run/secrets/")
 
     def _get_zone_id(self, zone: str) -> str:
         if zone in self._zone_id_cache:
@@ -78,14 +76,10 @@ class CloudflareDNSProvider(DNSProvider):
             record_id=record_id,
         )
 
-    def delete_txt_record(
-        self, zone: str, name: str, value: str | None = None
-    ) -> bool:
+    def delete_txt_record(self, zone: str, name: str, value: str | None = None) -> bool:
         zone_id = self._get_zone_id(zone)
         fqdn = self._fqdn(name, zone)
-        records = self._client.dns.records.list(
-            zone_id=zone_id, type="TXT", name=fqdn
-        )
+        records = self._client.dns.records.list(zone_id=zone_id, type="TXT", name=fqdn)
         deleted = False
         for rec in records.result or []:
             if value is None or rec.content == value:
@@ -97,9 +91,7 @@ class CloudflareDNSProvider(DNSProvider):
     def get_txt_records(self, zone: str, name: str) -> list[DNSRecord]:
         zone_id = self._get_zone_id(zone)
         fqdn = self._fqdn(name, zone)
-        records = self._client.dns.records.list(
-            zone_id=zone_id, type="TXT", name=fqdn
-        )
+        records = self._client.dns.records.list(zone_id=zone_id, type="TXT", name=fqdn)
         return [
             DNSRecord(
                 fqdn=rec.name,

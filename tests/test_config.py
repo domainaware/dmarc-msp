@@ -37,10 +37,7 @@ class TestLoadSettings:
     def test_load_from_yaml_file(self, tmp_path):
         config_file = tmp_path / "config.yaml"
         config_file.write_text(
-            "msp:\n"
-            "  domain: test.example.com\n"
-            "opensearch:\n"
-            "  password: yaml_password\n"
+            "msp:\n  domain: test.example.com\nopensearch:\n  password: yaml_password\n"
         )
         settings = load_settings(config_file)
         assert settings.msp.domain == "test.example.com"
@@ -75,9 +72,7 @@ class TestLoadSettings:
 
     def test_env_override_cloudflare_token(self, tmp_path):
         config_file = tmp_path / "config.yaml"
-        config_file.write_text(
-            "opensearch:\n  password: test\n"
-        )
+        config_file.write_text("opensearch:\n  password: test\n")
         with patch.dict(
             "os.environ",
             {"CLOUDFLARE_API_TOKEN": "cf_token_123"},
@@ -90,8 +85,7 @@ class TestLoadSettings:
         monkeypatch.chdir(tmp_path)
         config_file = tmp_path / "dmarc-msp.yaml"
         config_file.write_text(
-            "msp:\n  domain: discovered.example.com\n"
-            "opensearch:\n  password: test\n"
+            "msp:\n  domain: discovered.example.com\nopensearch:\n  password: test\n"
         )
         settings = load_settings(None)
         assert settings.msp.domain == "discovered.example.com"

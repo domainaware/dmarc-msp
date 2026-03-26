@@ -14,7 +14,10 @@ from dmarc_msp.services.onboarding import OnboardingService
 def _make_services(db_session: Session):
     client_svc = ClientService(db_session)
     dns = MagicMock()
-    dns.create_authorization_record.return_value = MagicMock(record_id="rec_123")
+    dns.create_authorization_record.return_value = MagicMock(
+        record=MagicMock(record_id="rec_123"),
+        already_existed=False,
+    )
     dns.verify_authorization_record.return_value = True
     dns.delete_authorization_record.return_value = True
     opensearch = MagicMock()

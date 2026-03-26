@@ -72,9 +72,7 @@ class RetentionService:
                         "transitions": [
                             {
                                 "state_name": "delete",
-                                "conditions": {
-                                    "min_index_age": f"{retention_days}d"
-                                },
+                                "conditions": {"min_index_age": f"{retention_days}d"},
                             }
                         ],
                     },

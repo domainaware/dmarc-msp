@@ -121,8 +121,8 @@ def load_settings(config_path: str | Path | None = None) -> Settings:
     # Resolve Cloudflare token from env
     cf_token = os.environ.get("CLOUDFLARE_API_TOKEN", "")
     if cf_token:
-        file_data.setdefault("dns", {}).setdefault("cloudflare", {})[
-            "api_token"
-        ] = cf_token
+        file_data.setdefault("dns", {}).setdefault("cloudflare", {})["api_token"] = (
+            cf_token
+        )
 
     return Settings(**file_data)

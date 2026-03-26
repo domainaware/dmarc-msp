@@ -43,9 +43,7 @@ class ClientService:
         index_prefix = (index_prefix or slug).lower().strip()
         tenant_name = slug
 
-        existing = (
-            self.db.query(ClientRow).filter(ClientRow.name == name_lower).first()
-        )
+        existing = self.db.query(ClientRow).filter(ClientRow.name == name_lower).first()
         if existing:
             if existing.status == ClientStatus.OFFBOARDED.value:
                 # Reactivate
@@ -128,14 +126,10 @@ class ClientService:
 
         # Check the new name isn't already taken
         existing = (
-            self.db.query(ClientRow)
-            .filter(ClientRow.name == new_name_lower)
-            .first()
+            self.db.query(ClientRow).filter(ClientRow.name == new_name_lower).first()
         )
         if existing and existing.id != client.id:
-            raise ClientAlreadyExistsError(
-                f"Client '{new_name}' already exists"
-            )
+            raise ClientAlreadyExistsError(f"Client '{new_name}' already exists")
 
         old_name = client.name
         client.name = new_name_lower

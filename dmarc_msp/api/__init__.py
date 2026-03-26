@@ -50,9 +50,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(
         parsedmarc.router, prefix="/api/v1/parsedmarc", tags=["parsedmarc"]
     )
-    app.include_router(
-        retention.router, prefix="/api/v1/retention", tags=["retention"]
-    )
+    app.include_router(retention.router, prefix="/api/v1/retention", tags=["retention"])
 
     @app.get("/health")
     def health():

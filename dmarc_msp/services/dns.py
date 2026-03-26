@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass
 
 from dmarc_msp.config import Settings
 from dmarc_msp.dns_providers.base import DNSProvider, DNSRecord
@@ -10,6 +11,14 @@ from dmarc_msp.dns_providers.base import DNSProvider, DNSRecord
 logger = logging.getLogger(__name__)
 
 DMARC_AUTH_VALUE = "v=DMARC1"
+
+
+@dataclass
+class AuthRecordResult:
+    """Result of creating/checking a DMARC authorization record."""
+
+    record: DNSRecord
+    already_existed: bool
 
 
 class DNSProviderError(Exception):
@@ -44,19 +53,34 @@ class DNSService:
 
         return f"{client_domain}._report._dmarc.{msp_part}"
 
-    def create_authorization_record(self, client_domain: str) -> DNSRecord:
-        """Create the DMARC authorization TXT record for a client domain."""
+    def create_authorization_record(self, client_domain: str) -> AuthRecordResult:
+        """Create the DMARC authorization TXT record for a client domain.
+
+        If the record already exists, returns it without calling create.
+        """
         name = self.authorization_record_name(client_domain)
-        logger.info(
-            "Creating DMARC auth record: %s.%s TXT %s",
-            name,
-            self.zone,
-            DMARC_AUTH_VALUE,
-        )
         try:
-            return self.provider.create_txt_record(
+            # Check if the record already exists
+            existing = self.provider.get_txt_records(zone=self.zone, name=name)
+            for rec in existing:
+                if rec.value == DMARC_AUTH_VALUE:
+                    logger.info(
+                        "DMARC auth record already exists: %s.%s",
+                        name,
+                        self.zone,
+                    )
+                    return AuthRecordResult(record=rec, already_existed=True)
+
+            logger.info(
+                "Creating DMARC auth record: %s.%s TXT %s",
+                name,
+                self.zone,
+                DMARC_AUTH_VALUE,
+            )
+            record = self.provider.create_txt_record(
                 zone=self.zone, name=name, value=DMARC_AUTH_VALUE
             )
+            return AuthRecordResult(record=record, already_existed=False)
         except Exception as e:
             raise self._wrap_error(e) from e
 

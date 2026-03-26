@@ -18,7 +18,10 @@ from dmarc_msp.services.onboarding import (
 def _make_service(db_session: Session):
     client_svc = ClientService(db_session)
     dns = MagicMock()
-    dns.create_authorization_record.return_value = MagicMock(record_id="rec_123")
+    dns.create_authorization_record.return_value = MagicMock(
+        record=MagicMock(record_id="rec_123"),
+        already_existed=False,
+    )
     dns.verify_authorization_record.return_value = True
     dns.delete_authorization_record.return_value = True
     opensearch = MagicMock()
@@ -56,7 +59,9 @@ def test_add_domain_create_client_flag_noop_if_exists(db_session: Session):
     svc, client_svc = _make_service(db_session)
     client_svc.create("Acme Corp")
     result = svc.add_domain(
-        "Acme Corp", "acme.com", create_client=True,
+        "Acme Corp",
+        "acme.com",
+        create_client=True,
     )
     assert result.client_name == "acme corp"
 
@@ -305,7 +310,10 @@ def test_bulk_import_with_create_client(db_session: Session, tmp_path):
     domain_file.write_text("acme.com\nacme.net\n")
 
     result = svc.bulk_import(
-        str(domain_file), "NewClient", operation="add", create_client=True,
+        str(domain_file),
+        "NewClient",
+        operation="add",
+        create_client=True,
     )
     assert len(result.succeeded) == 2
     clients = client_svc.list()
@@ -375,9 +383,7 @@ def test_add_domain_rolls_back_on_opensearch_failure(db_session: Session):
 def test_add_domain_rolls_back_on_dashboard_import_failure(db_session: Session):
     svc, client_svc = _make_service(db_session)
     client_svc.create("Acme Corp")
-    svc.dashboards.import_for_client.side_effect = RuntimeError(
-        "Name does not resolve"
-    )
+    svc.dashboards.import_for_client.side_effect = RuntimeError("Name does not resolve")
 
     with pytest.raises(RuntimeError):
         svc.add_domain("Acme Corp", "acme.com")

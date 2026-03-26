@@ -57,7 +57,9 @@ def test_add_domain_passes_create_client_flag(api_client_with_mocks):
         )
     assert resp.status_code == 201
     mock_svc.add_domain.assert_called_once_with(
-        "New Client", "acme.com", create_client=True,
+        "New Client",
+        "acme.com",
+        create_client=True,
     )
 
 

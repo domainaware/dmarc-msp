@@ -31,9 +31,7 @@ def _config_file(tmp_path):
 def test_create_client_fails_if_opensearch_unreachable(tmp_path):
     config = _config_file(tmp_path)
 
-    with patch(
-        "dmarc_msp.cli.client.OpenSearchService"
-    ) as mock_os_cls:
+    with patch("dmarc_msp.cli.client.OpenSearchService") as mock_os_cls:
         mock_os = MagicMock()
         mock_os.health.side_effect = ConnectionError("Connection refused")
         mock_os_cls.return_value = mock_os
@@ -49,16 +47,12 @@ def test_create_client_fails_if_opensearch_unreachable(tmp_path):
 def test_create_client_no_db_entry_if_opensearch_unreachable(tmp_path):
     config = _config_file(tmp_path)
 
-    with patch(
-        "dmarc_msp.cli.client.OpenSearchService"
-    ) as mock_os_cls:
+    with patch("dmarc_msp.cli.client.OpenSearchService") as mock_os_cls:
         mock_os = MagicMock()
         mock_os.health.side_effect = ConnectionError("Connection refused")
         mock_os_cls.return_value = mock_os
 
-        runner.invoke(
-            app, ["client", "create", "Acme Corp", "--config", config]
-        )
+        runner.invoke(app, ["client", "create", "Acme Corp", "--config", config])
 
     # Verify no client was written to the DB
     from dmarc_msp.db import init_db
@@ -102,9 +96,7 @@ def test_create_client_success(tmp_path):
 def test_create_client_provisioning_failure_is_hard_error(tmp_path):
     config = _config_file(tmp_path)
 
-    with patch(
-        "dmarc_msp.cli.client.OpenSearchService"
-    ) as mock_os_cls:
+    with patch("dmarc_msp.cli.client.OpenSearchService") as mock_os_cls:
         mock_os = MagicMock()
         mock_os.health.return_value = {"status": "green"}
         mock_os.provision_tenant.side_effect = RuntimeError("tenant creation failed")
@@ -135,9 +127,13 @@ def test_create_client_with_retention(tmp_path):
         result = runner.invoke(
             app,
             [
-                "client", "create", "Acme Corp",
-                "--retention-days", "365",
-                "--config", config,
+                "client",
+                "create",
+                "Acme Corp",
+                "--retention-days",
+                "365",
+                "--config",
+                config,
             ],
         )
 

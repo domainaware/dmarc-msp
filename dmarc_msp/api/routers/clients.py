@@ -49,9 +49,7 @@ def create_client(
         )
         os_svc.provision_tenant(client.tenant_name, client.index_prefix)
         if client.retention_days:
-            ret_svc.create_client_policy(
-                client.index_prefix, client.retention_days
-            )
+            ret_svc.create_client_policy(client.index_prefix, client.retention_days)
         dash_svc.import_for_client(client.tenant_name, client.index_prefix)
         return svc.to_info(client)
     except ClientAlreadyExistsError as e:
@@ -94,9 +92,7 @@ def rename_client(name: str, body: ClientRename, svc: ClientServiceDep):
 
 
 @router.post("/{name}/offboard")
-def offboard_client(
-    name: str, body: ClientOffboard, settings: SettingsDep, db: DbDep
-):
+def offboard_client(name: str, body: ClientOffboard, settings: SettingsDep, db: DbDep):
     try:
         svc = get_offboarding_service(settings, db)
         result = svc.offboard_client(

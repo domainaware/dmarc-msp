@@ -65,10 +65,7 @@ class DashboardService:
 
     def _import_saved_objects(self, tenant_name: str, ndjson: str) -> None:
         """POST the NDJSON to the Dashboards saved objects API."""
-        url = (
-            f"{self.dashboards_url}/api/saved_objects/_import"
-            "?overwrite=true"
-        )
+        url = f"{self.dashboards_url}/api/saved_objects/_import?overwrite=true"
         headers = {
             "osd-xsrf": "true",
             "securitytenant": tenant_name,

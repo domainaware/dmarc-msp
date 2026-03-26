@@ -56,9 +56,7 @@ class Route53DNSProvider(DNSProvider):
         logger.info("Created/updated TXT record: %s -> %s", fqdn, value)
         return DNSRecord(fqdn=fqdn, value=value, ttl=ttl)
 
-    def delete_txt_record(
-        self, zone: str, name: str, value: str | None = None
-    ) -> bool:
+    def delete_txt_record(self, zone: str, name: str, value: str | None = None) -> bool:
         fqdn = self._fqdn(name, zone)
         records = self.get_txt_records(zone, name)
         if not records:

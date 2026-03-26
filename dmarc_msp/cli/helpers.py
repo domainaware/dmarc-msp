@@ -59,9 +59,7 @@ def get_dns_provider(settings: Settings) -> DNSProvider:
         raise ValueError(f"Unknown DNS provider: {provider_name}")
 
 
-def get_onboarding_service(
-    settings: Settings, db: Session
-) -> OnboardingService:
+def get_onboarding_service(settings: Settings, db: Session) -> OnboardingService:
     dns_provider = get_dns_provider(settings)
     signaler = DockerSignaler(settings.parsedmarc.container)
 
@@ -71,16 +69,12 @@ def get_onboarding_service(
         opensearch=OpenSearchService(settings.opensearch),
         dashboards=DashboardService(settings.dashboards, settings.opensearch),
         retention=RetentionService(settings.opensearch, settings.retention),
-        parsedmarc=ParsedmarcService(
-            settings.parsedmarc.domain_map_file, signaler
-        ),
+        parsedmarc=ParsedmarcService(settings.parsedmarc.domain_map_file, signaler),
         db=db,
     )
 
 
-def get_offboarding_service(
-    settings: Settings, db: Session
-) -> OffboardingService:
+def get_offboarding_service(settings: Settings, db: Session) -> OffboardingService:
     dns_provider = get_dns_provider(settings)
     signaler = DockerSignaler(settings.parsedmarc.container)
 
@@ -88,9 +82,7 @@ def get_offboarding_service(
         client_service=ClientService(db),
         dns=DNSService(dns_provider, settings),
         opensearch=OpenSearchService(settings.opensearch),
-        parsedmarc=ParsedmarcService(
-            settings.parsedmarc.domain_map_file, signaler
-        ),
+        parsedmarc=ParsedmarcService(settings.parsedmarc.domain_map_file, signaler),
         retention=RetentionService(settings.opensearch, settings.retention),
         db=db,
     )

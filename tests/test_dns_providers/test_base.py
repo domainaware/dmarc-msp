@@ -16,8 +16,9 @@ class FakeDNSProvider(DNSProvider):
         for rec in self.records[key]:
             if rec.value == value:
                 return rec
-        record = DNSRecord(fqdn=key, value=value, ttl=ttl,
-                           record_id=f"id-{len(self.records[key])}")
+        record = DNSRecord(
+            fqdn=key, value=value, ttl=ttl, record_id=f"id-{len(self.records[key])}"
+        )
         self.records[key].append(record)
         return record
 

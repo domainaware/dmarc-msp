@@ -70,6 +70,7 @@ def test_cleanup_emails_deletes_old_files(tmp_path):
     old_file.write_text("old")
     old_mtime = time.time() - (2 * 86400)
     import os
+
     os.utime(old_file, (old_mtime, old_mtime))
 
     # Create a recent file

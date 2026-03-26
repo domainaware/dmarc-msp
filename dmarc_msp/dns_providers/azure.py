@@ -16,9 +16,7 @@ logger = logging.getLogger(__name__)
 class AzureDNSProvider(DNSProvider):
     """Manages TXT records via Azure DNS."""
 
-    def __init__(
-        self, subscription_id: str, resource_group: str, zone_name: str
-    ):
+    def __init__(self, subscription_id: str, resource_group: str, zone_name: str):
         try:
             from azure.identity import DefaultAzureCredential
             from azure.mgmt.dns import DnsManagementClient
@@ -56,18 +54,14 @@ class AzureDNSProvider(DNSProvider):
     @staticmethod
     def _is_not_found(e: Exception) -> bool:
         """Check if an Azure SDK exception is a not-found error."""
-        error_code = getattr(e, "error_code", None) or getattr(
-            e, "code", None
-        )
+        error_code = getattr(e, "error_code", None) or getattr(e, "code", None)
         if error_code and error_code in _AZURE_NOT_FOUND_CODES:
             return True
         # HttpResponseError with status 404
         status = getattr(e, "status_code", None)
         return status == 404
 
-    def delete_txt_record(
-        self, zone: str, name: str, value: str | None = None
-    ) -> bool:
+    def delete_txt_record(self, zone: str, name: str, value: str | None = None) -> bool:
         try:
             self._client.record_sets.delete(
                 self._resource_group, self._zone_name, name, "TXT"

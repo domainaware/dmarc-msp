@@ -23,7 +23,8 @@ def add(
     client: str = typer.Argument(..., help="Client name"),
     domains: list[str] = typer.Argument(..., help="Domains to add"),
     create_client: bool = typer.Option(
-        False, "--create-client",
+        False,
+        "--create-client",
         help="Create the client if it doesn't exist",
     ),
     config: str | None = typer.Option(None, "--config", "-c"),
@@ -37,12 +38,17 @@ def add(
         for domain in domains:
             try:
                 result = svc.add_domain(
-                    client, domain, create_client=create_client,
+                    client,
+                    domain,
+                    create_client=create_client,
                 )
-                console.print(
-                    f"  [green]✓[/green] {result.domain} "
-                    f"(dns={'verified' if result.dns_verified else 'pending'})"
-                )
+                if result.dns_record_existed:
+                    dns_status = "already exists"
+                elif result.dns_verified:
+                    dns_status = "verified"
+                else:
+                    dns_status = "pending"
+                console.print(f"  [green]✓[/green] {result.domain} (dns={dns_status})")
             except Exception as e:
                 failed.append((domain, e))
                 console.print(f"  [red]✗[/red] {domain}: {e}")
@@ -72,12 +78,8 @@ def remove(
         failed = []
         for domain in domains:
             try:
-                client_name = svc.remove_domain(
-                    domain, purge_dns=not keep_dns
-                )
-                console.print(
-                    f"  [green]✓[/green] {domain} (from {client_name})"
-                )
+                client_name = svc.remove_domain(domain, purge_dns=not keep_dns)
+                console.print(f"  [green]✓[/green] {domain} (from {client_name})")
             except Exception as e:
                 failed.append((domain, e))
                 console.print(f"  [red]✗[/red] {domain}: {e}")
@@ -132,13 +134,9 @@ def verify(
             try:
                 verified = dns_svc.verify_authorization_record(domain)
                 if verified:
-                    console.print(
-                        f"  [green]✓[/green] {domain}"
-                    )
+                    console.print(f"  [green]✓[/green] {domain}")
                 else:
-                    console.print(
-                        f"  [yellow]✗[/yellow] {domain} (not found)"
-                    )
+                    console.print(f"  [yellow]✗[/yellow] {domain} (not found)")
             except Exception as e:
                 console.print(f"  [red]✗[/red] {domain}: {e}")
     finally:
@@ -187,7 +185,8 @@ def bulk_add(
     client: str = typer.Argument(..., help="Client name"),
     file: str = typer.Argument(..., help="File with one domain per line"),
     create_client: bool = typer.Option(
-        False, "--create-client",
+        False,
+        "--create-client",
         help="Create the client if it doesn't exist",
     ),
     config: str | None = typer.Option(None, "--config", "-c"),
@@ -198,7 +197,10 @@ def bulk_add(
     try:
         svc = get_onboarding_service(settings, db)
         result = svc.bulk_import(
-            file, client, operation="add", create_client=create_client,
+            file,
+            client,
+            operation="add",
+            create_client=create_client,
         )
         console.print(
             f"Bulk add: {len(result.succeeded)} succeeded, "

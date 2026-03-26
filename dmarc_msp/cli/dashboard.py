@@ -64,9 +64,7 @@ def import_all_dashboards(
                 )
             except Exception as e:
                 failed.append((client_row.name, e))
-                console.print(
-                    f"  [red]✗[/red] {client_row.name}: {e}"
-                )
+                console.print(f"  [red]✗[/red] {client_row.name}: {e}")
 
         total = len(clients)
         ok = total - len(failed)

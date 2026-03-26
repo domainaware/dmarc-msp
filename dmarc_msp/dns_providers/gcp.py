@@ -27,9 +27,10 @@ class GCPDNSProvider(DNSProvider):
 
         # Point the Google auth library at the Docker secret if it exists
         # and GOOGLE_APPLICATION_CREDENTIALS isn't already set.
-        if not os.environ.get("GOOGLE_APPLICATION_CREDENTIALS") and Path(
-            GCP_SECRET_PATH
-        ).exists():
+        if (
+            not os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
+            and Path(GCP_SECRET_PATH).exists()
+        ):
             os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = GCP_SECRET_PATH
 
         self._dns_client = gdns.Client(project=project)
@@ -70,9 +71,7 @@ class GCPDNSProvider(DNSProvider):
         logger.info("Created TXT record: %s -> %s", fqdn, value)
         return DNSRecord(fqdn=fqdn, value=value, ttl=ttl)
 
-    def delete_txt_record(
-        self, zone: str, name: str, value: str | None = None
-    ) -> bool:
+    def delete_txt_record(self, zone: str, name: str, value: str | None = None) -> bool:
         fqdn = self._fqdn(name, zone)
         managed_zone = self._get_zone(zone)
         records = list(managed_zone.list_resource_record_sets())

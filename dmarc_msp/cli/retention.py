@@ -14,9 +14,7 @@ console = Console()
 
 @app.command("cleanup-emails")
 def cleanup_emails(
-    maildir: str = typer.Option(
-        "/var/mail/dmarc", "--maildir", help="Path to Maildir"
-    ),
+    maildir: str = typer.Option("/var/mail/dmarc", "--maildir", help="Path to Maildir"),
     config: str | None = typer.Option(None, "--config", "-c"),
 ):
     """Delete processed email files older than retention.email_days."""

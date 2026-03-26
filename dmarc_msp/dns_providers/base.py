@@ -32,9 +32,7 @@ class DNSProvider(ABC):
         ...
 
     @abstractmethod
-    def delete_txt_record(
-        self, zone: str, name: str, value: str | None = None
-    ) -> bool:
+    def delete_txt_record(self, zone: str, name: str, value: str | None = None) -> bool:
         """Delete a TXT record. Returns True if deleted, False if not found."""
         ...
 
@@ -43,9 +41,7 @@ class DNSProvider(ABC):
         """Retrieve all TXT records for a given name."""
         ...
 
-    def verify_record_exists(
-        self, zone: str, name: str, expected_value: str
-    ) -> bool:
+    def verify_record_exists(self, zone: str, name: str, expected_value: str) -> bool:
         """Check whether the expected record exists."""
         records = self.get_txt_records(zone, name)
         return any(r.value == expected_value for r in records)

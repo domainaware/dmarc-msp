@@ -59,6 +59,7 @@ class OnboardingResult(BaseModel):
     client_name: str
     domain: str
     dns_verified: bool = False
+    dns_record_existed: bool = False
     tenant: str
     index_prefix: str
 

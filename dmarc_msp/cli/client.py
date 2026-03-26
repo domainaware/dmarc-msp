@@ -39,9 +39,7 @@ def create(
             os_svc = OpenSearchService(settings.opensearch)
             os_svc.health()
         except Exception as e:
-            console.print(
-                f"[red]Error:[/red] Cannot connect to OpenSearch: {e}"
-            )
+            console.print(f"[red]Error:[/red] Cannot connect to OpenSearch: {e}")
             raise typer.Exit(1)
 
         client = svc.create(
@@ -61,9 +59,7 @@ def create(
 
         if client.retention_days:
             ret_svc = RetentionService(settings.opensearch, settings.retention)
-            ret_svc.create_client_policy(
-                client.index_prefix, client.retention_days
-            )
+            ret_svc.create_client_policy(client.index_prefix, client.retention_days)
 
         dash_svc = DashboardService(settings.dashboards, settings.opensearch)
         dash_svc.import_for_client(client.tenant_name, client.index_prefix)
@@ -233,9 +229,7 @@ def offboard(
 
     try:
         svc = get_offboarding_service(settings, db)
-        result = svc.offboard_client(
-            name, purge_dns=True, purge_indices=purge_indices
-        )
+        result = svc.offboard_client(name, purge_dns=True, purge_indices=purge_indices)
         console.print(
             f"Offboarded [bold]{result.client_name}[/bold] "
             f"({result.domains_removed} domains removed)"

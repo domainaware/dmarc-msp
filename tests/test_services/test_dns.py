@@ -31,10 +31,29 @@ def test_create_and_verify_authorization_record():
     provider = FakeDNSProvider()
     svc = DNSService(provider, settings)
 
-    record = svc.create_authorization_record("client.example.com")
-    assert record.value == "v=DMARC1"
+    result = svc.create_authorization_record("client.example.com")
+    assert result.record.value == "v=DMARC1"
+    assert result.already_existed is False
 
     assert svc.verify_authorization_record("client.example.com")
+
+
+def test_create_authorization_record_already_exists():
+    settings = Settings(
+        msp={"domain": "dmarc.msp-example.com"},
+        dns={"zone": "msp-example.com"},
+        opensearch={"password": "test"},
+    )
+    provider = FakeDNSProvider()
+    svc = DNSService(provider, settings)
+
+    # First creation
+    svc.create_authorization_record("client.example.com")
+
+    # Second creation should detect existing record
+    result = svc.create_authorization_record("client.example.com")
+    assert result.record.value == "v=DMARC1"
+    assert result.already_existed is True
 
 
 def test_delete_authorization_record():
@@ -58,6 +77,7 @@ def test_create_error_includes_provider_name():
         opensearch={"password": "test"},
     )
     provider = MagicMock()
+    provider.get_txt_records.return_value = []
     provider.create_txt_record.side_effect = RuntimeError("record exists")
     svc = DNSService(provider, settings)
 

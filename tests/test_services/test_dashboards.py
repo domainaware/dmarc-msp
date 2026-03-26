@@ -16,18 +16,24 @@ def _make_template(tmp_path, lines=None):
     template = tmp_path / "dashboards.ndjson"
     if lines is None:
         lines = [
-            json.dumps({
-                "type": "index-pattern",
-                "attributes": {"title": "dmarc_aggregate*"},
-            }),
-            json.dumps({
-                "type": "index-pattern",
-                "attributes": {"title": "dmarc_f*"},
-            }),
-            json.dumps({
-                "type": "index-pattern",
-                "attributes": {"title": "smtp_tls*"},
-            }),
+            json.dumps(
+                {
+                    "type": "index-pattern",
+                    "attributes": {"title": "dmarc_aggregate*"},
+                }
+            ),
+            json.dumps(
+                {
+                    "type": "index-pattern",
+                    "attributes": {"title": "dmarc_f*"},
+                }
+            ),
+            json.dumps(
+                {
+                    "type": "index-pattern",
+                    "attributes": {"title": "smtp_tls*"},
+                }
+            ),
         ]
     template.write_text("\n".join(lines) + "\n")
     dash_config = DashboardsConfig(
@@ -54,10 +60,12 @@ def test_rewrite_template_does_not_double_prefix(tmp_path):
 
 def test_rewrite_template_skips_blank_lines(tmp_path):
     lines = [
-        json.dumps({
-            "type": "index-pattern",
-            "attributes": {"title": "dmarc_aggregate*"},
-        }),
+        json.dumps(
+            {
+                "type": "index-pattern",
+                "attributes": {"title": "dmarc_aggregate*"},
+            }
+        ),
         "",
         "   ",
         json.dumps({"type": "vis", "id": "some-vis"}),
@@ -96,7 +104,8 @@ def test_import_for_client_success(tmp_path):
         mock_client.post.assert_called_once()
         call_kwargs = mock_client.post.call_args
         assert "securitytenant" in call_kwargs.kwargs.get(
-            "headers",call_kwargs[1].get("headers", {}))
+            "headers", call_kwargs[1].get("headers", {})
+        )
 
 
 def test_import_for_client_api_failure(tmp_path):

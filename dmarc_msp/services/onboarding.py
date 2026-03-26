@@ -73,9 +73,7 @@ class OnboardingService:
 
         # Check for duplicate domain across all clients
         existing = (
-            self.db.query(DomainRow)
-            .filter(DomainRow.domain_name == domain)
-            .first()
+            self.db.query(DomainRow).filter(DomainRow.domain_name == domain).first()
         )
         if existing and existing.status != DomainStatus.OFFBOARDED.value:
             existing_client = self.client_service.get_by_id(existing.client_id)
@@ -104,7 +102,8 @@ class OnboardingService:
             is_first = len(client.active_domains) == 0
 
             # Create DMARC authorization DNS record
-            dns_record = self.dns.create_authorization_record(domain)
+            auth_result = self.dns.create_authorization_record(domain)
+            dns_record = auth_result.record
 
             # Store domain in DB
             if existing and existing.status == DomainStatus.OFFBOARDED.value:
@@ -146,9 +145,7 @@ class OnboardingService:
                     client.tenant_name, client.index_prefix
                 )
             except FileNotFoundError:
-                logger.warning(
-                    "Dashboard template not found, skipping import"
-                )
+                logger.warning("Dashboard template not found, skipping import")
 
             # Verify DNS propagation
             dns_verified = self.dns.verify_authorization_record(domain)
@@ -176,6 +173,7 @@ class OnboardingService:
             client_name=client.name,
             domain=domain,
             dns_verified=dns_verified,
+            dns_record_existed=auth_result.already_existed,
             tenant=client.tenant_name,
             index_prefix=client.index_prefix,
         )
@@ -187,9 +185,7 @@ class OnboardingService:
         """
         domain = domain.lower().strip()
         domain_row = (
-            self.db.query(DomainRow)
-            .filter(DomainRow.domain_name == domain)
-            .first()
+            self.db.query(DomainRow).filter(DomainRow.domain_name == domain).first()
         )
         if not domain_row:
             raise DomainNotFoundError(f"Domain '{domain}' not found")
@@ -230,9 +226,7 @@ class OnboardingService:
         domain = domain.lower().strip()
 
         domain_row = (
-            self.db.query(DomainRow)
-            .filter(DomainRow.domain_name == domain)
-            .first()
+            self.db.query(DomainRow).filter(DomainRow.domain_name == domain).first()
         )
         if not domain_row or domain_row.status == DomainStatus.OFFBOARDED.value:
             raise DomainNotFoundError(f"Domain '{domain}' not found or offboarded")
@@ -274,9 +268,7 @@ class OnboardingService:
                         dest_client.tenant_name, dest_client.index_prefix
                     )
                 except FileNotFoundError:
-                    logger.warning(
-                        "Dashboard template not found, skipping import"
-                    )
+                    logger.warning("Dashboard template not found, skipping import")
 
             self.db.add(
                 AuditLogRow(
@@ -316,7 +308,9 @@ class OnboardingService:
             try:
                 if operation == "add":
                     self.add_domain(
-                        client_name, domain, create_client=create_client,
+                        client_name,
+                        domain,
+                        create_client=create_client,
                     )
                     results.succeeded.append(domain)
                 elif operation == "remove":

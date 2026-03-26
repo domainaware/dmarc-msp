@@ -96,10 +96,7 @@ def test_config_validate_invalid_config():
 def test_config_validate_missing_password(tmp_path):
     config_file = tmp_path / "config.yaml"
     config_file.write_text(
-        "msp:\n"
-        "  domain: test.example.com\n"
-        "opensearch:\n"
-        "  password: ''\n"
+        "msp:\n  domain: test.example.com\nopensearch:\n  password: ''\n"
     )
 
     with patch("httpx.Client") as mock_client_cls:
@@ -109,9 +106,7 @@ def test_config_validate_missing_password(tmp_path):
         mock_client.get.side_effect = Exception("no password")
         mock_client_cls.return_value = mock_client
 
-        result = runner.invoke(
-            app, ["config-validate", "--config", str(config_file)]
-        )
+        result = runner.invoke(app, ["config-validate", "--config", str(config_file)])
 
     assert result.exit_code == 0
     assert "not configured" in result.output
