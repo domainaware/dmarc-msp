@@ -3,6 +3,8 @@ secrets/*
 !secrets/.gitkeep
 deploy/dashboards/branding/*
 !deploy/dashboards/branding/.gitkeep
+.well-known/*
+!.well-known/.gitkeep
 parsedmarc.ini
 dmarc-msp.yaml
 domain_map.yaml

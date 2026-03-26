@@ -99,6 +99,7 @@ services:
     volumes:
       - certs:/etc/letsencrypt
       - certbot-webroot:/var/www/certbot:ro
+      - ./.well-known:/var/www/well-known/.well-known:ro
     environment:
       - MSP_DOMAIN=${MSP_DOMAIN:-dmarc.msp-example.com}
     networks:
