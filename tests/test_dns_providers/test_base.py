@@ -1,6 +1,6 @@
 """Tests for DNS provider base class."""
 
-from dmarc_msp.dns_providers.base import DNSProvider, DNSRecord
+from dmarc_msp.dns_providers.base import DNSProvider, DNSRecord, parse_txt_value
 
 
 class FakeDNSProvider(DNSProvider):
@@ -76,3 +76,31 @@ def test_verify_record_exists():
     provider.create_txt_record("example.com", "test", "v=DMARC1")
     assert provider.verify_record_exists("example.com", "test", "v=DMARC1")
     assert not provider.verify_record_exists("example.com", "test", "wrong")
+
+
+# --- parse_txt_value ---
+
+
+def test_parse_txt_value_unquoted():
+    assert parse_txt_value("v=DMARC1") == "v=DMARC1"
+
+
+def test_parse_txt_value_single_quoted():
+    assert parse_txt_value('"v=DMARC1"') == "v=DMARC1"
+
+
+def test_parse_txt_value_multiple_quoted_segments():
+    assert (
+        parse_txt_value('"v=spf1 " "include:example.com " "-all"')
+        == "v=spf1 include:example.com -all"
+    )
+
+
+def test_parse_txt_value_strips_whitespace():
+    assert parse_txt_value('  "v=DMARC1"  ') == "v=DMARC1"
+
+
+def test_parse_txt_value_list_of_segments():
+    assert parse_txt_value(["v=spf1 ", "include:example.com ", "-all"]) == (
+        "v=spf1 include:example.com -all"
+    )

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 
-from dmarc_msp.dns_providers.base import DNSProvider, DNSRecord
+from dmarc_msp.dns_providers.base import DNSProvider, DNSRecord, parse_txt_value
 
 # Azure SDK raises ResourceNotFoundError for missing records, but we
 # import it lazily to avoid requiring the azure extra at import time.
@@ -86,7 +86,7 @@ class AzureDNSProvider(DNSProvider):
 
         results: list[DNSRecord] = []
         for txt_rec in record_set.txt_records or []:
-            val = " ".join(txt_rec.value)
+            val = parse_txt_value(txt_rec.value)
             results.append(
                 DNSRecord(
                     fqdn=f"{name}.{zone}",

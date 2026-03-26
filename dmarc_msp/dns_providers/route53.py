@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 
-from dmarc_msp.dns_providers.base import DNSProvider, DNSRecord
+from dmarc_msp.dns_providers.base import DNSProvider, DNSRecord, parse_txt_value
 
 logger = logging.getLogger(__name__)
 
@@ -99,7 +99,7 @@ class Route53DNSProvider(DNSProvider):
             if rrset["Type"] != "TXT":
                 continue
             for rr in rrset.get("ResourceRecords", []):
-                val = rr["Value"].strip('"')
+                val = parse_txt_value(rr["Value"])
                 results.append(
                     DNSRecord(fqdn=fqdn, value=val, ttl=rrset.get("TTL", 3600))
                 )

@@ -7,7 +7,7 @@ from pathlib import Path
 
 import cloudflare as cf
 
-from dmarc_msp.dns_providers.base import DNSProvider, DNSRecord
+from dmarc_msp.dns_providers.base import DNSProvider, DNSRecord, parse_txt_value
 
 logger = logging.getLogger(__name__)
 
@@ -95,7 +95,7 @@ class CloudflareDNSProvider(DNSProvider):
         return [
             DNSRecord(
                 fqdn=rec.name,
-                value=str(rec.content),
+                value=parse_txt_value(str(rec.content)),
                 ttl=int(rec.ttl or 3600),
                 record_id=rec.id,
             )

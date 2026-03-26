@@ -7,7 +7,7 @@ import os
 from pathlib import Path
 from typing import Any
 
-from dmarc_msp.dns_providers.base import DNSProvider, DNSRecord
+from dmarc_msp.dns_providers.base import DNSProvider, DNSRecord, parse_txt_value
 
 logger = logging.getLogger(__name__)
 
@@ -101,7 +101,7 @@ class GCPDNSProvider(DNSProvider):
                 results.append(
                     DNSRecord(
                         fqdn=fqdn,
-                        value=rdata.strip('"'),
+                        value=parse_txt_value(rdata),
                         ttl=rrset.ttl,
                     )
                 )
