@@ -51,7 +51,7 @@ class OpenSearchService:
 
     def create_client_role(self, tenant_name: str, index_prefix: str) -> None:
         """Create a role scoped to the client's index prefix and tenant."""
-        role_name = f"dmarc_client_{tenant_name}"
+        role_name = f"client_{tenant_name}"
         body = {
             "cluster_permissions": [],
             "index_permissions": [
@@ -82,7 +82,7 @@ class OpenSearchService:
 
     def delete_client_role(self, tenant_name: str) -> None:
         """Delete a client role."""
-        role_name = f"dmarc_client_{tenant_name}"
+        role_name = f"client_{tenant_name}"
         try:
             self.client.transport.perform_request(
                 "DELETE",
@@ -96,7 +96,7 @@ class OpenSearchService:
         self, tenant_name: str, backend_roles: list[str] | None = None
     ) -> None:
         """Map users/backend roles to the client role."""
-        role_name = f"dmarc_client_{tenant_name}"
+        role_name = f"client_{tenant_name}"
         body: dict = {}
         if backend_roles:
             body["backend_roles"] = backend_roles
@@ -109,7 +109,7 @@ class OpenSearchService:
 
     def delete_role_mapping(self, tenant_name: str) -> None:
         """Delete the role mapping for a client role."""
-        role_name = f"dmarc_client_{tenant_name}"
+        role_name = f"client_{tenant_name}"
         try:
             self.client.transport.perform_request(
                 "DELETE",

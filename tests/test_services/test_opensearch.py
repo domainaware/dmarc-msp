@@ -27,7 +27,7 @@ def test_provision_tenant():
     assert calls[0][1]["body"] == {"description": "Tenant for client: acme_corp"}
     # Second call: client role creation
     assert calls[1][0][0] == "PUT"
-    assert "dmarc_client_acme_corp" in calls[1][0][1]
+    assert "client_acme_corp" in calls[1][0][1]
     body = calls[1][1]["body"]
     assert body["index_permissions"][0]["index_patterns"] == ["acme_corp-*"]
     assert body["tenant_permissions"][0]["allowed_actions"] == ["kibana_all_read"]
@@ -41,11 +41,11 @@ def test_deprovision_tenant():
     # Deletes role mapping, role, then tenant
     assert calls[0][0] == (
         "DELETE",
-        "/_plugins/_security/api/rolesmapping/dmarc_client_acme_corp",
+        "/_plugins/_security/api/rolesmapping/client_acme_corp",
     )
     assert calls[1][0] == (
         "DELETE",
-        "/_plugins/_security/api/roles/dmarc_client_acme_corp",
+        "/_plugins/_security/api/roles/client_acme_corp",
     )
     assert calls[2][0] == ("DELETE", "/_plugins/_security/api/tenants/acme_corp")
 
@@ -62,7 +62,7 @@ def test_create_client_role():
     svc.create_client_role("acme_corp", "acme")
     call = mock_client.transport.perform_request.call_args
     assert call[0][0] == "PUT"
-    assert "dmarc_client_acme_corp" in call[0][1]
+    assert "client_acme_corp" in call[0][1]
     body = call[1]["body"]
     assert body["index_permissions"][0]["index_patterns"] == ["acme-*"]
     assert body["tenant_permissions"][0]["tenant_patterns"] == ["acme_corp"]
@@ -73,7 +73,7 @@ def test_delete_client_role():
     svc.delete_client_role("acme_corp")
     mock_client.transport.perform_request.assert_called_once_with(
         "DELETE",
-        "/_plugins/_security/api/roles/dmarc_client_acme_corp",
+        "/_plugins/_security/api/roles/client_acme_corp",
     )
 
 
