@@ -18,21 +18,29 @@ def _make_service():
 
 def test_provision_tenant():
     svc = _make_service()
-    svc.provision_tenant("acme_corp")
-    svc.client.transport.perform_request.assert_called_once_with(
-        "PUT",
-        "/_plugins/_security/api/tenants/acme_corp",
-        body={"description": "Tenant for client: acme_corp"},
-    )
+    svc.provision_tenant("acme_corp", "acme_corp")
+    calls = svc.client.transport.perform_request.call_args_list
+    assert len(calls) == 2
+    # First call: tenant creation
+    assert calls[0][0] == ("PUT", "/_plugins/_security/api/tenants/acme_corp")
+    assert calls[0][1]["body"] == {"description": "Tenant for client: acme_corp"}
+    # Second call: client role creation
+    assert calls[1][0][0] == "PUT"
+    assert "dmarc_client_acme_corp" in calls[1][0][1]
+    body = calls[1][1]["body"]
+    assert body["index_permissions"][0]["index_patterns"] == ["acme_corp-*"]
+    assert body["tenant_permissions"][0]["allowed_actions"] == ["kibana_all_read"]
 
 
 def test_deprovision_tenant():
     svc = _make_service()
     svc.deprovision_tenant("acme_corp")
-    svc.client.transport.perform_request.assert_called_once_with(
-        "DELETE",
-        "/_plugins/_security/api/tenants/acme_corp",
-    )
+    calls = svc.client.transport.perform_request.call_args_list
+    assert len(calls) == 3
+    # Deletes role mapping, role, then tenant
+    assert calls[0][0] == ("DELETE", "/_plugins/_security/api/rolesmapping/dmarc_client_acme_corp")
+    assert calls[1][0] == ("DELETE", "/_plugins/_security/api/roles/dmarc_client_acme_corp")
+    assert calls[2][0] == ("DELETE", "/_plugins/_security/api/tenants/acme_corp")
 
 
 def test_deprovision_tenant_not_found():

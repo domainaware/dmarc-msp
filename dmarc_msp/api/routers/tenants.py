@@ -19,8 +19,7 @@ def provision_tenant(
 ):
     try:
         client = client_svc.get(body.client_name)
-        os_svc.provision_tenant(client.tenant_name)
-        os_svc.create_client_role(client.tenant_name, client.index_prefix)
+        os_svc.provision_tenant(client.tenant_name, client.index_prefix)
         return {"message": f"Provisioned tenant: {client.tenant_name}"}
     except ClientNotFoundError as e:
         raise HTTPException(404, str(e))
@@ -35,7 +34,6 @@ def deprovision_tenant(
     try:
         client = client_svc.get(body.client_name)
         os_svc.deprovision_tenant(client.tenant_name)
-        os_svc.delete_client_role(client.tenant_name)
         return {"message": f"Deprovisioned tenant: {client.tenant_name}"}
     except ClientNotFoundError as e:
         raise HTTPException(404, str(e))

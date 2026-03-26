@@ -25,8 +25,7 @@ def provision(
         client_svc = ClientService(db)
         client_row = client_svc.get(client)
         os_svc = OpenSearchService(settings.opensearch)
-        os_svc.provision_tenant(client_row.tenant_name)
-        os_svc.create_client_role(client_row.tenant_name, client_row.index_prefix)
+        os_svc.provision_tenant(client_row.tenant_name, client_row.index_prefix)
         console.print(f"Provisioned tenant: [bold]{client_row.tenant_name}[/bold]")
     except Exception as e:
         console.print(f"[red]Error:[/red] {e}")
@@ -48,7 +47,6 @@ def deprovision(
         client_row = client_svc.get(client)
         os_svc = OpenSearchService(settings.opensearch)
         os_svc.deprovision_tenant(client_row.tenant_name)
-        os_svc.delete_client_role(client_row.tenant_name)
         console.print(f"Deprovisioned tenant: [bold]{client_row.tenant_name}[/bold]")
     except Exception as e:
         console.print(f"[red]Error:[/red] {e}")

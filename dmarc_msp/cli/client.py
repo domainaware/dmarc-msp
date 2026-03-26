@@ -56,8 +56,7 @@ def create(
         console.print(f"  Tenant:       {client.tenant_name}")
 
         # Provision OpenSearch tenant, role, and dashboards
-        os_svc.provision_tenant(client.tenant_name)
-        os_svc.create_client_role(client.tenant_name, client.index_prefix)
+        os_svc.provision_tenant(client.tenant_name, client.index_prefix)
         console.print("  OpenSearch:   tenant + role provisioned")
 
         if client.retention_days:

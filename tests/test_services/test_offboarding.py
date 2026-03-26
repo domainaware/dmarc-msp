@@ -101,7 +101,6 @@ def test_offboard_deprovisions_tenant_and_role(db_session: Session):
 
     offboard.offboard_client("Acme Corp")
     offboard.opensearch.deprovision_tenant.assert_called_once_with("acme_corp")
-    offboard.opensearch.delete_client_role.assert_called_once_with("acme_corp")
     offboard.retention.delete_client_policy.assert_called_once_with("acme_corp")
 
 

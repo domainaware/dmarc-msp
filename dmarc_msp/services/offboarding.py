@@ -63,9 +63,8 @@ class OffboardingService:
             # Reload parsedmarc
             self.parsedmarc.reload()
 
-            # Deprovision OpenSearch tenant + role
+            # Deprovision OpenSearch tenant, role, and role mapping
             self.opensearch.deprovision_tenant(client.tenant_name)
-            self.opensearch.delete_client_role(client.tenant_name)
             self.retention.delete_client_policy(client.index_prefix)
 
             # Optionally purge data indices

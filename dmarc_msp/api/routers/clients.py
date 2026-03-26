@@ -47,8 +47,7 @@ def create_client(
             notes=body.notes,
             retention_days=body.retention_days,
         )
-        os_svc.provision_tenant(client.tenant_name)
-        os_svc.create_client_role(client.tenant_name, client.index_prefix)
+        os_svc.provision_tenant(client.tenant_name, client.index_prefix)
         if client.retention_days:
             ret_svc.create_client_policy(
                 client.index_prefix, client.retention_days

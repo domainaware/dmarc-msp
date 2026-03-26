@@ -23,8 +23,8 @@ class OpenSearchService:
             ssl_show_warn=False,
         )
 
-    def provision_tenant(self, tenant_name: str) -> None:
-        """Create an OpenSearch tenant (idempotent)."""
+    def provision_tenant(self, tenant_name: str, index_prefix: str) -> None:
+        """Create an OpenSearch tenant and its read-only client role (idempotent)."""
         body = {"description": f"Tenant for client: {tenant_name}"}
         self.client.transport.perform_request(
             "PUT",
@@ -33,8 +33,13 @@ class OpenSearchService:
         )
         logger.info("Provisioned tenant: %s", tenant_name)
 
+        self.create_client_role(tenant_name, index_prefix)
+
     def deprovision_tenant(self, tenant_name: str) -> None:
-        """Delete an OpenSearch tenant."""
+        """Delete an OpenSearch tenant, its client role, and role mapping."""
+        self.delete_role_mapping(tenant_name)
+        self.delete_client_role(tenant_name)
+
         try:
             self.client.transport.perform_request(
                 "DELETE",
@@ -101,6 +106,18 @@ class OpenSearchService:
             body=body,
         )
         logger.info("Created role mapping for: %s", role_name)
+
+    def delete_role_mapping(self, tenant_name: str) -> None:
+        """Delete the role mapping for a client role."""
+        role_name = f"dmarc_client_{tenant_name}"
+        try:
+            self.client.transport.perform_request(
+                "DELETE",
+                f"/_plugins/_security/api/rolesmapping/{role_name}",
+            )
+            logger.info("Deleted role mapping for: %s", role_name)
+        except Exception:
+            logger.warning("Role mapping '%s' not found for deletion", role_name)
 
     def delete_client_indices(self, index_prefix: str) -> None:
         """Delete all indices matching the client's prefix."""

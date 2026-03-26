@@ -74,7 +74,6 @@ def test_add_domain_provisions_on_first_domain(db_session: Session):
     client_svc.create("Acme Corp")
     svc.add_domain("Acme Corp", "acme.com")
     svc.opensearch.provision_tenant.assert_called_once()
-    svc.opensearch.create_client_role.assert_called_once()
 
 
 def test_add_domain_skips_provisioning_on_subsequent_domains(db_session: Session):

@@ -132,8 +132,7 @@ class OnboardingService:
 
             # Provision OpenSearch tenant + role if first domain
             if is_first:
-                self.opensearch.provision_tenant(client.tenant_name)
-                self.opensearch.create_client_role(
+                self.opensearch.provision_tenant(
                     client.tenant_name, client.index_prefix
                 )
                 if client.retention_days:
@@ -263,8 +262,7 @@ class OnboardingService:
 
             # Provision destination tenant if first domain
             if is_first_for_dest:
-                self.opensearch.provision_tenant(dest_client.tenant_name)
-                self.opensearch.create_client_role(
+                self.opensearch.provision_tenant(
                     dest_client.tenant_name, dest_client.index_prefix
                 )
                 if dest_client.retention_days:
