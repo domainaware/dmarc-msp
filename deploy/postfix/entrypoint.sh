@@ -28,7 +28,11 @@ fi
 envsubst '$MSP_DOMAIN $TLS_CONFIG' < /etc/postfix/main.cf.template > /etc/postfix/main.cf
 chmod 644 /etc/postfix/main.cf
 
-# Ensure Maildir ownership (volume may be freshly created)
+# Ensure Maildir structure exists and is owned by dmarc (volume may be
+# freshly created, or parsedmarc may have created dirs as a different UID)
+mkdir -p /var/mail/dmarc/Maildir/new \
+         /var/mail/dmarc/Maildir/cur \
+         /var/mail/dmarc/Maildir/tmp
 chown -R dmarc:dmarc /var/mail/dmarc
 chmod 700 /var/mail/dmarc
 
