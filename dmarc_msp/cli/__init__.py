@@ -15,15 +15,15 @@ rich_utils.STYLE_OPTIONS_PANEL_BORDER = ""
 rich_utils.STYLE_COMMANDS_PANEL_BORDER = ""
 rich_utils.STYLE_ERRORS_SUGGESTION = ""
 
-import typer
+import typer  # noqa: E402
 
-from dmarc_msp.cli.client import app as client_app
-from dmarc_msp.cli.dashboard import app as dashboard_app
-from dmarc_msp.cli.domain import app as domain_app
-from dmarc_msp.cli.parsedmarc import app as parsedmarc_app
-from dmarc_msp.cli.retention import app as retention_app
-from dmarc_msp.cli.server import app as server_app
-from dmarc_msp.cli.tenant import app as tenant_app
+from dmarc_msp.cli.client import app as client_app  # noqa: E402
+from dmarc_msp.cli.dashboard import app as dashboard_app  # noqa: E402
+from dmarc_msp.cli.domain import app as domain_app  # noqa: E402
+from dmarc_msp.cli.parsedmarc import app as parsedmarc_app  # noqa: E402
+from dmarc_msp.cli.retention import app as retention_app  # noqa: E402
+from dmarc_msp.cli.server import app as server_app  # noqa: E402
+from dmarc_msp.cli.tenant import app as tenant_app  # noqa: E402
 
 app = typer.Typer(
     name="dmarcmsp",
