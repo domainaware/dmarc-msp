@@ -2,6 +2,19 @@
 
 from __future__ import annotations
 
+from typer import rich_utils
+
+# Override Typer's default Rich styles so help text is readable on dark terminals.
+# The defaults use "dim" and dark ANSI colors that vanish on common dark backgrounds.
+rich_utils.STYLE_HELPTEXT = ""
+rich_utils.STYLE_HELPTEXT_FIRST_LINE = ""
+rich_utils.STYLE_METAVAR_SEPARATOR = ""
+rich_utils.STYLE_OPTION_DEFAULT = "dim cyan"
+rich_utils.STYLE_OPTION_ENVVAR = "cyan"
+rich_utils.STYLE_OPTIONS_PANEL_BORDER = ""
+rich_utils.STYLE_COMMANDS_PANEL_BORDER = ""
+rich_utils.STYLE_ERRORS_SUGGESTION = ""
+
 import typer
 
 from dmarc_msp.cli.client import app as client_app

@@ -136,7 +136,9 @@ def verify(
                 if verified:
                     console.print(f"  [green]✓[/green] {domain}")
                 else:
-                    console.print(f"  [yellow]✗[/yellow] {domain} (not found)")
+                    console.print(
+                        f"  [yellow]✗[/yellow] {domain} (DNS record not found)"
+                    )
             except Exception as e:
                 console.print(f"  [red]✗[/red] {domain}: {e}")
     finally:

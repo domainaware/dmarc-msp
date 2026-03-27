@@ -12,6 +12,9 @@ from dmarc_msp.process.docker import DockerSignaler
 logger = logging.getLogger(__name__)
 
 
+_MANAGED_HEADER = "# This file is managed by dmarcmsp. Do not edit it manually.\n\n"
+
+
 class ParsedmarcService:
     def __init__(self, domain_map_file: str, signaler: DockerSignaler):
         self.domain_map_file = Path(domain_map_file)
@@ -85,4 +88,5 @@ class ParsedmarcService:
     def _write(self, mapping: dict[str, list[str]]) -> None:
         sorted_mapping = dict(sorted(mapping.items()))
         with open(self.domain_map_file, "w") as f:
+            f.write(_MANAGED_HEADER)
             yaml.dump(sorted_mapping, f, default_flow_style=False, sort_keys=True)

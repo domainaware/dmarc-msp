@@ -139,7 +139,7 @@ retention:
   index_default_days: 180
 
   # Number of days to keep processed DMARC report emails in Maildir
-  # before the cron container deletes them. These are the raw XML/ZIP
+  # before the dmarc-msp container deletes them. These are the raw XML/ZIP
   # files — parsed data lives in OpenSearch independently.
   email_days: 30
 

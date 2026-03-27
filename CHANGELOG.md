@@ -1,27 +1,67 @@
 # Changelog
 
-All notable changes to this project will be documented in this file.
+## 0.1.0 2026-03-27
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+First public beta release.
 
-## [0.1.0] - 2026-03-23
+### Highlights
 
-### Added
+dmarc-msp automates DMARC monitoring across multiple client domains for
+Managed Service Providers. A single email address receives all DMARC reports;
+parsedmarc routes them to per-client OpenSearch indices via a YAML domain map
+that dmarc-msp manages automatically.
 
-- **Client management** — create, list, show, update, rename, and offboard clients with isolated OpenSearch tenants, roles, and index prefixes.
-- **Domain management** — add, remove, move, and verify domains across clients. Bulk operations via text file (bulk-add, bulk-remove, bulk-move).
-- **DNS authorization** — automatic RFC 7489 DMARC authorization TXT record creation and deletion on the MSP's domain.
-- **Pluggable DNS providers** — Cloudflare (built-in), AWS Route 53, Google Cloud DNS, and Azure DNS via optional extras.
-- **OpenSearch multi-tenancy** — per-client tenant, role, and role mapping provisioning. Clients see only their own data.
-- **Dashboard provisioning** — automatic rewrite and import of parsedmarc's bundled OpenSearch Dashboards saved objects into per-client tenants.
-- **Index retention** — ISM policy management with a global default (180 days) and per-client overrides.
-- **Email retention** — cron-based cleanup of processed DMARC report emails from Maildir.
-- **parsedmarc integration** — YAML domain-to-index-prefix mapping management with atomic moves and SIGHUP-based config reload via Docker.
-- **Typer CLI** (`dmarcmsp`) — full command suite for client, domain, tenant, dashboard, and parsedmarc management.
-- **FastAPI management API** — REST API mirroring CLI functionality, with IP allowlist middleware. Swagger UI at `/docs`.
-- **Audit trail** — every action logged with timestamps, client context, and outcome.
-- **Docker Compose stack** — single `docker compose up` deployment: Postfix (SMTP), parsedmarc, OpenSearch, Dashboards, certbot (TLS), cron, and the management tool.
-- **Network isolation** — two-network architecture separating public-facing services (frontend) from internal infrastructure (backend, `internal: true`).
-- **Secrets management** — `.env` + Docker Compose secrets, with automatic resolution from env vars, secret files, or config YAML.
-- **Idempotent operations** — all onboarding and provisioning commands are safe to re-run.
+### Core Features
+
+- **Client lifecycle** — create, list, show, update, rename, and offboard
+  clients. Each client gets an isolated OpenSearch tenant, role, role mapping,
+  and pre-configured dashboards.
+- **Domain management** — add, remove, move, and verify domains with automatic
+  DNS authorization record provisioning (RFC 7489 `_dmarc` TXT records).
+- **Bulk operations** — `bulk-add`, `bulk-remove`, and `bulk-verify` commands
+  for managing many domains at once.
+- **Pluggable DNS providers** — Cloudflare (included), AWS Route 53, Google
+  Cloud DNS, and Azure DNS (optional extras).
+- **OpenSearch multi-tenancy** — automatic tenant, role, and role-mapping
+  provisioning per client.
+- **Dashboard provisioning** — NDJSON template rewriting to scope Dashboards
+  saved objects to each client's index prefix. Supports `import` and
+  `import-all` for bulk re-import.
+- **Retention management** — ISM policy-based index retention with a
+  configurable global default and per-client overrides. Automated email cleanup
+  removes processed report files from Maildir on a daily schedule.
+- **Onboarding orchestration** — single command adds a domain, creates DNS
+  records, updates the parsedmarc domain map, and reloads parsedmarc.
+  Rolls back on failure.
+- **Offboarding orchestration** — full client teardown: removes domains, DNS
+  records, OpenSearch tenant/role/role-mapping, and marks the client offboarded.
+- **Audit logging** — every operation is recorded in a SQLite audit log.
+- **Configuration** — Pydantic Settings with YAML config file, environment
+  variables, and Docker secrets support.
+
+### Deployment Stack
+
+- **Docker Compose** deployment with seven services: Postfix (receive-only
+  SMTP), parsedmarc, OpenSearch 3, OpenSearch Dashboards 3, nginx (TLS
+  termination), certbot (Let's Encrypt HTTP-01), and the dmarc-msp management
+  container.
+- **Automated TLS bootstrap** — nginx starts HTTP-only, certbot obtains
+  certificates, nginx hot-reloads to HTTPS. Postfix waits for certs before
+  starting.
+- **MTA-STS support** — optional MTA-STS policy hosting via nginx.
+- **Network isolation** — OpenSearch on an internal-only Docker network;
+  external access only through nginx.
+- **Branding support** — custom login page assets for OpenSearch Dashboards.
+
+### Management API
+
+- Optional FastAPI server with endpoints for clients, domains, tenants,
+  dashboards, and parsedmarc reload.
+- IP allowlist middleware for access control.
+- Localhost-only binding by default.
+
+### Developer Experience
+
+- 177 tests with in-memory SQLite (no mocks for DB).
+- CI via GitHub Actions.
+- Shell completion support for the `dmarcmsp` CLI.

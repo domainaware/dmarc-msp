@@ -134,7 +134,7 @@ def init_db(database_url: str) -> sessionmaker[Session]:
     """Create engine and tables, return a sessionmaker."""
     engine = create_engine(database_url, echo=False)
 
-    # Enable WAL mode and case-insensitive LIKE for SQLite
+    # Enable WAL mode and foreign keys for SQLite
     @event.listens_for(engine, "connect")
     def _set_sqlite_pragma(dbapi_conn, connection_record):
         cursor = dbapi_conn.cursor()

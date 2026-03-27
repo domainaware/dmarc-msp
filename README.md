@@ -407,7 +407,7 @@ sudo systemctl enable --now dmarc-msp
 
 # Check status
 sudo systemctl status dmarc-msp
-sudo -u dmarc-msp docker compose -C /opt/dmarc-msp ps
+sudo -u dmarc-msp sh -c 'cd /opt/dmarc-msp && docker compose ps'
 ```
 
 ### Updating
@@ -534,7 +534,7 @@ Services that bridge both networks: Dashboards, parsedmarc, dmarc-msp.
 | `:80`      | nginx      | HTTP → HTTPS redirect + ACME challenges|
 | `:443`     | nginx      | HTTPS reverse proxy to Dashboards      |
 | `:25`      | Postfix    | SMTP (STARTTLS)                        |
-| `:587`     | Postfix    | SMTP over TLS                          |
+| `:587`     | Postfix    | SMTP submission (STARTTLS)             |
 | `lo:8000`  | dmarc-msp  | Management API (localhost only)        |
 
 OpenSearch `:9200` and Dashboards `:5601` are internal only — no host port binding.
@@ -613,7 +613,7 @@ Clients authenticate to Dashboards, not to OpenSearch directly. The `kibanaserve
 
 ## FAQ
 
-### `[Errno 21] Is a directory: '/etc/parsedmarc_domain_map.yaml'`
+### Why do I get `[Errno 21] Is a directory: '/etc/parsedmarc_domain_map.yaml'`?
 
 This happens when `domain_map.yaml` didn't exist before the first `docker compose up`. Docker creates missing bind-mount sources as root-owned directories instead of files.
 
@@ -630,6 +630,34 @@ To prevent this, always create the file before starting the stack (included in t
 
 ```bash
 touch domain_map.yaml
+```
+
+### How can I review mailbox messages?
+
+After parsedmarc processes emails, it moves them out of the inbox into Maildir archive subfolders. Messages won't be in `Maildir/new/` or `Maildir/cur/` — they'll be in `.Archive.Aggregate/`, `.Archive.Invalid/`, or `.Archive.Forensic/` under the Maildir root.
+
+List archive folders and their contents:
+
+```bash
+docker exec parsedmarc-postfix ls /var/mail/dmarc/Maildir/
+docker exec parsedmarc-postfix ls /var/mail/dmarc/Maildir/.Archive.Aggregate/cur/
+docker exec parsedmarc-postfix ls /var/mail/dmarc/Maildir/.Archive.Invalid/cur/
+```
+
+Maildir filenames are opaque UIDs (e.g., `1774608212.V804I104b6eM192009.cc5e98fd3de3`), so use `grep` to search by content:
+
+```bash
+# Find messages from a specific sender
+docker exec parsedmarc-postfix grep -rl "noreply-dmarc-support@google.com" /var/mail/dmarc/Maildir/
+
+# Find messages mentioning a domain
+docker exec parsedmarc-postfix grep -rl "example.com" /var/mail/dmarc/Maildir/.Archive.Aggregate/cur/
+```
+
+View a specific message:
+
+```bash
+docker exec parsedmarc-postfix cat /var/mail/dmarc/Maildir/.Archive.Aggregate/cur/<filename>
 ```
 
 ## License

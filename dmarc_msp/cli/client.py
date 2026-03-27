@@ -125,7 +125,10 @@ def show(
         console.print(f"  Index prefix:   {client.index_prefix}")
         console.print(f"  Tenant:         {client.tenant_name}")
         console.print(f"  Contact:        {client.contact_email or '—'}")
-        console.print(f"  Retention:      {client.retention_days or 'default'} days")
+        retention = (
+            f"{client.retention_days} days" if client.retention_days else "default"
+        )
+        console.print(f"  Retention:      {retention}")
         console.print(f"  Created:        {client.created_at}")
         console.print(f"  Notes:          {client.notes or '—'}")
         console.print()

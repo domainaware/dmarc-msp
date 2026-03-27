@@ -73,3 +73,11 @@ def test_reload_calls_signaler(tmp_path):
     svc = _make_service(tmp_path)
     assert svc.reload() is True
     svc.signaler.send_sighup.assert_called_once()
+
+
+def test_written_file_has_managed_header(tmp_path):
+    svc = _make_service(tmp_path)
+    svc.add_domain_mapping("acme", "acme.com")
+
+    content = (tmp_path / "domain_map.yaml").read_text()
+    assert content.startswith("# This file is managed by dmarcmsp.")
