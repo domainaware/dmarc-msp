@@ -94,8 +94,8 @@ def load_settings(config_path: str | Path | None = None) -> Settings:
     """Load settings from a YAML config file, with env var overrides."""
     if config_path is None:
         candidates = [
-            Path("/etc/dmarc-msp/config.yaml"),
-            Path("dmarc-msp.yaml"),
+            Path("/etc/dmarc-msp/config.yml"),
+            Path("dmarc-msp.yml"),
         ]
         for candidate in candidates:
             if candidate.exists():

@@ -149,7 +149,7 @@ services:
     # secrets:
     #   - gcp_sa_key
     volumes:
-      - ./dmarc-msp.yaml:/etc/dmarc-msp/config.yaml:ro
+      - ./dmarc-msp.yml:/etc/dmarc-msp/config.yml:ro
       - ./opensearch/opensearch_dashboards.ndjson:/etc/dmarc-msp/opensearch_dashboards.ndjson:ro
       - ./domain_map.yaml:/etc/parsedmarc_domain_map.yaml
       - maildir:/var/mail/dmarc

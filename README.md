@@ -14,7 +14,7 @@ The entire stack deploys via a single `docker compose up`: SMTP ingestion, parse
 - **OpenSearch multi-tenancy** — each client gets a scoped tenant, role, and index prefix. Clients see only their own data in Dashboards.
 - **Dashboard provisioning** — automatically rewrites and imports parsedmarc's bundled dashboards into each client's tenant with the correct index prefix.
 - **Index retention policies** — manages ISM policies for automatic index cleanup. Supports a global default and per-client overrides (e.g., 2 years for healthcare clients).
-- **Email retention** — automatic cleanup of processed DMARC report emails from Maildir, configured in `dmarc-msp.yaml`.
+- **Email retention** — automatic cleanup of processed DMARC report emails from Maildir, configured in `dmarc-msp.yml`.
 - **Bulk operations** — import, remove, or move domains in bulk from a text file.
 - **Domain moves** — move a domain between clients without touching DNS. Only the YAML mapping and database are updated.
 - **CLI-first, server-optional** — the CLI calls the service layer directly by default. Optionally run as a FastAPI management API.
@@ -61,9 +61,9 @@ cd dmarc-msp
 
 # Copy templates
 cp .env.example .env
-cp dmarc-msp.example.yaml dmarc-msp.yaml
+cp dmarc-msp.example.yml dmarc-msp.yml
 chmod 600 .env
-chmod 644 dmarc-msp.yaml
+chmod 644 dmarc-msp.yml
 chmod 700 secrets/
 # After you have added any file under secrets, run
 find secrets/ -type f -exec chmod 600 {} +
@@ -76,7 +76,7 @@ $EDITOR .env
 touch domain_map.yaml
 
 # Edit the config — set your MSP domain, DNS zone, and provider
-$EDITOR dmarc-msp.yaml
+$EDITOR dmarc-msp.yml
 
 # Uncomment the env vars for your DNS provider in docker-compose.yml
 $EDITOR docker-compose.yml
@@ -320,7 +320,7 @@ docker compose restart opensearch-dashboards
 
 ## DNS Providers
 
-Set `dns.provider` in `dmarc-msp.yaml` and configure credentials in `.env`. Then uncomment the matching environment variables in the `dmarc-msp` service in `docker-compose.yml`.
+Set `dns.provider` in `dmarc-msp.yml` and configure credentials in `.env`. Then uncomment the matching environment variables in the `dmarc-msp` service in `docker-compose.yml`.
 
 |Provider|`dns.provider`|Credentials (set in `.env`)|pip extra|
 |--|--|--|--|
@@ -333,7 +333,7 @@ Most providers use environment variables in `.env`. GCP is the exception — it 
 
 Cloudflare is the default and its dependency is included in the base install. For other providers, install the corresponding pip extra (e.g., `pip install dmarc-msp[aws]`).
 
-See `dmarc-msp.example.yaml` for the full set of provider-specific config options.
+See `dmarc-msp.example.yml` for the full set of provider-specific config options.
 
 ## Production Deployment
 
@@ -363,16 +363,16 @@ Then follow the [Quick Start](#quick-start) configuration steps (copy templates,
 ```bash
 cd /opt/dmarc-msp
 sudo -u dmarc-msp cp .env.example .env
-sudo -u dmarc-msp cp dmarc-msp.example.yaml dmarc-msp.yaml
+sudo -u dmarc-msp cp dmarc-msp.example.yml dmarc-msp.yml
 sudo -u dmarc-msp touch domain_map.yaml
 sudo -u dmarc-msp chmod 600 .env
-sudo -u dmarc-msp chmod 644 dmarc-msp.yaml
+sudo -u dmarc-msp chmod 644 dmarc-msp.yml
 sudo -u dmarc-msp chmod 700 secrets/
 # After you have added any file under secrets, run
 sudo -u dmarc-msp find secrets/ -type f -exec chmod 600 {} +
 # Edit each configuration file
 sudo -u dmarc-msp $EDITOR .env
-sudo -u dmarc-msp $EDITOR dmarc-msp.yaml
+sudo -u dmarc-msp $EDITOR dmarc-msp.yml
 ```
 
 ### systemd service
@@ -440,7 +440,7 @@ docker compose down -v
 docker compose up --build -d
 ```
 
-The `-v` flag removes named volumes, which deletes all OpenSearch indices, the SQLite database, and the Maildir. The stack recreates them empty on startup. Configuration files (`.env`, `dmarc-msp.yaml`) are bind-mounted and are not affected.
+The `-v` flag removes named volumes, which deletes all OpenSearch indices, the SQLite database, and the Maildir. The stack recreates them empty on startup. Configuration files (`.env`, `dmarc-msp.yml`) are bind-mounted and are not affected.
 
 ## Architecture
 
@@ -560,7 +560,7 @@ The application resolves secrets in priority order: environment variable > Docke
 - `.env` — Docker Compose environment variables (passwords, API tokens)
 - `secrets/` — Docker secret files (GCP key)
 - `parsedmarc.ini` — legacy config file (no longer required; parsedmarc is now configured via environment variables in `docker-compose.yml`)
-- `dmarc-msp.yaml` — local config
+- `dmarc-msp.yml` — local config
 - `domain_map.yaml` — auto-managed, contains client domain mappings
 - `*.db` — SQLite database (client list, audit trail)
 

@@ -6,6 +6,7 @@ deploy/dashboards/branding/*
 .well-known/*
 !.well-known/.gitkeep
 parsedmarc.ini
+dmarc-msp.yml
 dmarc-msp.yaml
 domain_map.yaml
 *.db

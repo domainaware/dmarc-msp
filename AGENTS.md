@@ -123,7 +123,7 @@ A domain can only belong to one client at a time. Offboarded domains can be re-a
 - **Client rename** — changes display name only. `index_prefix` and `tenant_name` are immutable after creation.
 - **parsedmarc is a separate project** — parsedmarc has its own config format, CLI flags, and environment variables (`PARSEDMARC_*`). Do not confuse parsedmarc's config keys (e.g., `user`, `hosts`) with this project's config classes (e.g., `OpenSearchConfig.username`, `OpenSearchConfig.hosts`). When configuring parsedmarc env vars in `docker-compose.yml`, always refer to parsedmarc's own documentation at https://domainaware.github.io/parsedmarc/usage.html, not this project's code.
 - **Secrets** — most go in `.env` as env vars. GCP is the only provider using a Docker secret file. Never put secrets in config YAML or docker-compose.yml.
-- **Postfix** — custom receive-only container (not a relay image). Accepts mail for one address only, delivers to Maildir.
+- **Postfix** — custom receive-only container (not a relay image). Accepts mail for one address only, delivers to Maildir. Postfix uses `home_mailbox = Maildir/` which appends to the dmarc user's home (`/var/mail/dmarc`), so mail lands in `/var/mail/dmarc/Maildir/`. parsedmarc and the retention CLI must point to that path, not the parent directory. The `maildir` named volume is shared between Postfix, parsedmarc, and dmarc-msp; Postfix's entrypoint ensures correct ownership (UID 1000).
 - **nginx** — reverse proxy in front of Dashboards. Dashboards serves plain HTTP internally on port 5601; nginx terminates TLS.
 - **Email cleanup** — handled by the dmarc-msp container's background loop (runs daily), configured via `retention.email_days` in the YAML config. No separate cron container.
 
@@ -148,7 +148,7 @@ When creating ASCII/Unicode box-drawing diagrams, never hand-draw them. Instead,
 3. Add optional dependency to `pyproject.toml` under `[project.optional-dependencies]`.
 4. Add env vars to `docker-compose.yml` (commented out) and `.env.example`.
 5. Add the provider to the dropdown in `.github/ISSUE_TEMPLATE/bug_report.yml`.
-6. Document in README.md under "DNS Providers" and in `dmarc-msp.example.yaml`.
+6. Document in README.md under "DNS Providers" and in `dmarc-msp.example.yml`.
 
 ### Adding a new CLI command
 
@@ -176,6 +176,6 @@ These are in `.gitignore` — never generate or suggest committing them:
 - `.env` — Docker Compose env vars (contains passwords and API tokens)
 - `secrets/` — Docker secret files (GCP key)
 - `parsedmarc.ini` — legacy config (no longer required; parsedmarc uses env vars in docker-compose.yml)
-- `dmarc-msp.yaml` — local config (use `dmarc-msp.example.yaml` as template)
+- `dmarc-msp.yml` — local config (use `dmarc-msp.example.yml` as template)
 - `domain_map.yaml` — auto-managed by the service layer
 - `*.db` — SQLite database

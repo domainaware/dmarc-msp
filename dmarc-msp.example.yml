@@ -1,11 +1,11 @@
 # dmarc-msp configuration
 #
-# Copy to dmarc-msp.yaml and edit. This file is safe to commit —
+# Copy to dmarc-msp.yml and edit. This file is safe to commit —
 # all secrets come from env vars or Docker secret files, never from here.
 #
 # Config is loaded from (in order):
-#   1. /etc/dmarc-msp/config.yaml  (Docker mount)
-#   2. ./dmarc-msp.yaml            (local development)
+#   1. /etc/dmarc-msp/config.yml   (Docker mount)
+#   2. ./dmarc-msp.yml             (local development)
 # Override any value with env vars prefixed DMARCMSP__ (double underscore
 # for nesting, e.g. DMARCMSP__SERVER__PORT=9000).
 

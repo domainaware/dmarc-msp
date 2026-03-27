@@ -83,7 +83,7 @@ class TestLoadSettings:
 
     def test_auto_discover_config_file(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
-        config_file = tmp_path / "dmarc-msp.yaml"
+        config_file = tmp_path / "dmarc-msp.yml"
         config_file.write_text(
             "msp:\n  domain: discovered.example.com\nopensearch:\n  password: test\n"
         )
