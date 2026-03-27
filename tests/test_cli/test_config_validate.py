@@ -44,7 +44,7 @@ def test_config_validate_success(tmp_path):
         result = runner.invoke(app, ["config-validate", "--config", config_path])
 
     assert result.exit_code == 0
-    assert "dmarc.test.example.com" in result.output
+    assert "msp_domain: dmarc.test.example.com" in result.output
     assert "cloudflare" in result.output
     assert "test_password" not in result.output
 
