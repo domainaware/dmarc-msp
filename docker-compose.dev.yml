@@ -20,6 +20,7 @@ services:
     environment:
       - OPENSEARCH_HOSTS=["http://opensearch:9200"]
       - DISABLE_SECURITY_DASHBOARDS_PLUGIN=true
+      - OPENSEARCH_SECURITY_COOKIE_SECURE=false
 
   nginx:
     profiles:
