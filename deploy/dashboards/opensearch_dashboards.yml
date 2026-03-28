@@ -10,3 +10,7 @@ opensearch_security.readonly_mode.roles: [kibana_read_only]
 # Use this setting if you are running opensearch-dashboards without https
 opensearch_security.cookie.secure: false
 server.host: '0.0.0.0'
+# Turn off unused features
+data_source.enabled: false
+workspace.enabled: false
+explore.enabled: false
