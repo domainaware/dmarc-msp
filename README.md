@@ -279,7 +279,7 @@ You can replace the default OpenSearch Dashboards logos, favicon, and applicatio
 
 ### 1. Add your assets
 
-Place your image files in `deploy/dashboards/branding/` (SVG, PNG, or GIF — SVG recommended). These are served by Dashboards at the `ui/assets/branding/` URL path.
+Place your image files in `deploy/dashboards/branding/` (SVG, PNG, or GIF — SVG recommended). These are served by Dashboards at the `ui/branding/` URL path.
 
 ### 2. Configure branding
 
@@ -288,15 +288,15 @@ Add the following to `deploy/dashboards/opensearch_dashboards.yml`. Values must 
 ```yaml
 opensearchDashboards.branding:
   logo:
-    defaultUrl: "https://<dashboards-hostname>/ui/assets/branding/logo.svg"
-    darkModeUrl: "https://<dashboards-hostname>/ui/assets/branding/logo-dark.svg"
+    defaultUrl: "https://<dashboards-hostname>/ui/branding/logo.svg"
+    darkModeUrl: "https://<dashboards-hostname>/ui/branding/logo-dark.svg"
   mark:
-    defaultUrl: "https://<dashboards-hostname>/ui/assets/branding/mark.svg"
-    darkModeUrl: "https://<dashboards-hostname>/ui/assets/branding/mark-dark.svg"
+    defaultUrl: "https://<dashboards-hostname>/ui/branding/mark.svg"
+    darkModeUrl: "https://<dashboards-hostname>/ui/branding/mark-dark.svg"
   loadingLogo:
-    defaultUrl: "https://<dashboards-hostname>/ui/assets/branding/loading-logo.svg"
-    darkModeUrl: "https://<dashboards-hostname>/ui/assets/branding/loading-logo-dark.svg"
-  faviconUrl: "https://<dashboards-hostname>/ui/assets/branding/favicon.svg"
+    defaultUrl: "https://<dashboards-hostname>/ui/branding/loading-logo.svg"
+    darkModeUrl: "https://<dashboards-hostname>/ui/branding/loading-logo-dark.svg"
+  faviconUrl: "https://<dashboards-hostname>/ui/branding/favicon.svg"
   applicationTitle: "DMARC Dashboards"
   useExpandedHeader: false
 ```
