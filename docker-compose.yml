@@ -82,7 +82,7 @@ services:
       - OPENSEARCH_HOSTS=["https://opensearch:9200"]
     volumes:
       - ./deploy/dashboards/branding/:/usr/share/opensearch-dashboards/src/core/server/core_app/assets/branding/:ro
-      - ./deploy/dashboards/opensearch_dashboards.yml:/usr/share/opensearch-dashboards/config/opensearch_dashboards.yml:ro
+      - ./deploy/dashboards/opensearch_dashboards.yml:/usr/share/opensearch-dashboards/config/opensearch_dashboards.yml
 
     depends_on:
       opensearch:
