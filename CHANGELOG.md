@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.1 2026-03-27
+
+### Fixed
+
+- Made test assertion more specific in `test_config_validate_success` to resolve
+  CodeQL "incomplete URL substring sanitization" code scanning alert.
+- Mounted `opensearch_dashboards.yml` config into the opensearch-dashboards
+  container in `docker-compose.yml`.
+
 ## 0.1.0 2026-03-27
 
 First public beta release.
