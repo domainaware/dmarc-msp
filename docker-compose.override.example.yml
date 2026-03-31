@@ -1,0 +1,67 @@
+# docker-compose.override.example.yml
+#
+# Copy this file to docker-compose.override.yml to add extra nginx server
+# blocks for other websites or apps running on the same host.
+#
+# Docker Compose automatically merges docker-compose.override.yml on top of
+# docker-compose.yml — no extra flags needed.
+#
+# Steps:
+#   1. cp docker-compose.override.example.yml docker-compose.override.yml
+#   2. Create your nginx config(s) in deploy/nginx/extra/ (see example below)
+#   3. Add your backend service(s) below or point to an external host
+#   4. docker compose up -d
+#
+# Example extra site config (deploy/nginx/extra/myapp.conf):
+#
+#   server {
+#       listen 443 ssl;
+#       server_name myapp.example.com;
+#
+#       ssl_certificate     /etc/letsencrypt/live/myapp.example.com/fullchain.pem;
+#       ssl_certificate_key /etc/letsencrypt/live/myapp.example.com/privkey.pem;
+#
+#       ssl_protocols TLSv1.2 TLSv1.3;
+#
+#       resolver 127.0.0.11 valid=30s;
+#       set $backend http://myapp:8080;
+#
+#       location / {
+#           proxy_pass $backend;
+#           proxy_http_version 1.1;
+#           proxy_set_header Host $host;
+#           proxy_set_header X-Real-IP $remote_addr;
+#           proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+#           proxy_set_header X-Forwarded-Proto $scheme;
+#       }
+#   }
+#
+#   server {
+#       listen 80;
+#       server_name myapp.example.com;
+#
+#       location /.well-known/acme-challenge/ {
+#           root /var/www/certbot;
+#       }
+#
+#       location / {
+#           return 301 https://$host$request_uri;
+#       }
+#   }
+
+services:
+  nginx:
+    volumes:
+      # Mount extra site configs into conf.d — the main nginx.conf already
+      # includes everything via: include /etc/nginx/conf.d/*.conf;
+      #
+      # Bind-mount individual .conf files so they sit alongside the
+      # auto-generated mta-sts.conf without overwriting it.
+      - ./deploy/nginx/extra/myapp.conf:/etc/nginx/conf.d/myapp.conf:ro
+
+  # Example backend service — replace with your own
+  # myapp:
+  #   image: myapp:latest
+  #   networks:
+  #     - frontend
+  #   restart: unless-stopped

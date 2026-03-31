@@ -9,6 +9,9 @@ parsedmarc.ini
 dmarc-msp.yml
 dmarc-msp.yaml
 domain_map.yaml
+docker-compose.override.yml
+deploy/nginx/extra/*
+!deploy/nginx/extra/.gitkeep
 *.db
 
 # Python
