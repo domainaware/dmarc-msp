@@ -112,9 +112,7 @@ def test_client_user_list(tmp_path):
         mock_get.return_value = mock_os
 
         # List all client users
-        result = runner.invoke(
-            app, ["client", "user", "list", "--config", config]
-        )
+        result = runner.invoke(app, ["client", "user", "list", "--config", config])
 
     assert result.exit_code == 0
     assert "user1" in result.output
@@ -186,7 +184,9 @@ def test_client_user_reset_password_not_found(tmp_path):
 
     with patch("dmarc_msp.cli.client_user.get_opensearch_service") as mock_get:
         mock_os = MagicMock()
-        mock_os.update_internal_user_password.side_effect = UserNotFoundError("User 'nonexistent' not found")
+        mock_os.update_internal_user_password.side_effect = UserNotFoundError(
+            "User 'nonexistent' not found"
+        )
         mock_get.return_value = mock_os
 
         result = runner.invoke(
@@ -202,7 +202,9 @@ def test_client_user_disable_not_found(tmp_path):
 
     with patch("dmarc_msp.cli.client_user.get_opensearch_service") as mock_get:
         mock_os = MagicMock()
-        mock_os.disable_user.side_effect = UserNotFoundError("User 'nonexistent' not found")
+        mock_os.disable_user.side_effect = UserNotFoundError(
+            "User 'nonexistent' not found"
+        )
         mock_get.return_value = mock_os
 
         result = runner.invoke(
@@ -218,7 +220,9 @@ def test_client_user_delete_not_found(tmp_path):
 
     with patch("dmarc_msp.cli.client_user.get_opensearch_service") as mock_get:
         mock_os = MagicMock()
-        mock_os.get_internal_user.side_effect = UserNotFoundError("User 'nonexistent' not found")
+        mock_os.get_internal_user.side_effect = UserNotFoundError(
+            "User 'nonexistent' not found"
+        )
         mock_get.return_value = mock_os
 
         result = runner.invoke(

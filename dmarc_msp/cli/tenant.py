@@ -60,7 +60,9 @@ def deprovision(
 @app.command("migrate-prefix")
 def migrate_prefix(
     config: str | None = typer.Option(None, "--config", "-c"),
-    dry_run: bool = typer.Option(False, "--dry-run", help="Show what would change without making changes"),
+    dry_run: bool = typer.Option(
+        False, "--dry-run", help="Show what would change without making changes"
+    ),
 ):
     """Migrate tenant names to use the 'client_' prefix.
 
@@ -84,10 +86,14 @@ def migrate_prefix(
         to_migrate = [c for c in clients if not c.tenant_name.startswith("client_")]
 
         if not to_migrate:
-            console.print("All tenants already have the 'client_' prefix. Nothing to do.")
+            console.print(
+                "All tenants already have the 'client_' prefix. Nothing to do."
+            )
             return
 
-        table = Table(title="Tenant Prefix Migration" + (" (dry run)" if dry_run else ""))
+        table = Table(
+            title="Tenant Prefix Migration" + (" (dry run)" if dry_run else "")
+        )
         table.add_column("Client")
         table.add_column("Old Tenant")
         table.add_column("New Tenant")
@@ -99,7 +105,9 @@ def migrate_prefix(
             old_tenant = client_row.tenant_name
 
             if dry_run:
-                table.add_row(client_row.name, old_tenant, new_tenant, "[yellow]pending[/yellow]")
+                table.add_row(
+                    client_row.name, old_tenant, new_tenant, "[yellow]pending[/yellow]"
+                )
                 continue
 
             try:
@@ -119,14 +127,20 @@ def migrate_prefix(
                 client_row.tenant_name = new_tenant
                 db.commit()
                 db.refresh(client_row)
-                table.add_row(client_row.name, old_tenant, new_tenant, "[green]migrated[/green]")
+                table.add_row(
+                    client_row.name, old_tenant, new_tenant, "[green]migrated[/green]"
+                )
                 migrated += 1
             except Exception as e:
-                table.add_row(client_row.name, old_tenant, new_tenant, f"[red]failed: {e}[/red]")
+                table.add_row(
+                    client_row.name, old_tenant, new_tenant, f"[red]failed: {e}[/red]"
+                )
 
         console.print(table)
         if dry_run:
-            console.print(f"\n{len(to_migrate)} tenant(s) would be migrated. Run without --dry-run to apply.")
+            console.print(
+                f"\n{len(to_migrate)} tenant(s) would be migrated. Run without --dry-run to apply."
+            )
         else:
             console.print(f"\n{migrated}/{len(to_migrate)} tenant(s) migrated.")
     except Exception as e:

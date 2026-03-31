@@ -192,9 +192,7 @@ class OpenSearchService:
             "/_plugins/_security/api/internalusers/",
         )
 
-    def update_internal_user_password(
-        self, username: str, password: str
-    ) -> None:
+    def update_internal_user_password(self, username: str, password: str) -> None:
         """Update an internal user's password."""
         self._check_user_exists(username)
         self.client.transport.perform_request(
@@ -212,16 +210,12 @@ class OpenSearchService:
         self.client.transport.perform_request(
             "PATCH",
             f"/_plugins/_security/api/internalusers/{username}",
-            body=[
-                {"op": "replace", "path": "/attributes", "value": attributes}
-            ],
+            body=[{"op": "replace", "path": "/attributes", "value": attributes}],
         )
 
     # ── Role mapping helpers ──────────────────────────────────────────
 
-    def add_user_to_role_mapping(
-        self, role_name: str, username: str
-    ) -> None:
+    def add_user_to_role_mapping(self, role_name: str, username: str) -> None:
         """Add a user to a role mapping, creating it if necessary."""
         try:
             resp = self.client.transport.perform_request(
@@ -243,9 +237,7 @@ class OpenSearchService:
         )
         logger.info("Added user '%s' to role mapping '%s'", username, role_name)
 
-    def remove_user_from_role_mapping(
-        self, role_name: str, username: str
-    ) -> None:
+    def remove_user_from_role_mapping(self, role_name: str, username: str) -> None:
         """Remove a user from a role mapping."""
         try:
             resp = self.client.transport.perform_request(
@@ -265,9 +257,7 @@ class OpenSearchService:
             f"/_plugins/_security/api/rolesmapping/{role_name}",
             body=body,
         )
-        logger.info(
-            "Removed user '%s' from role mapping '%s'", username, role_name
-        )
+        logger.info("Removed user '%s' from role mapping '%s'", username, role_name)
 
     # ── Analyst role ──────────────────────────────────────────────────
 

@@ -28,7 +28,9 @@ def _fail(e: Exception) -> None:
     if isinstance(e, UserNotFoundError):
         console.print(f"[red]Error:[/red] {e}")
     elif isinstance(e, TransportError):
-        console.print(f"[red]Error:[/red] OpenSearch returned {e.status_code}: {e.error}")
+        console.print(
+            f"[red]Error:[/red] OpenSearch returned {e.status_code}: {e.error}"
+        )
     else:
         console.print(f"[red]Error:[/red] {e}")
     raise typer.Exit(1)

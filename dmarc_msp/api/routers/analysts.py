@@ -20,6 +20,7 @@ def _handle_error(e: Exception) -> None:
         raise HTTPException(502, f"OpenSearch returned {e.status_code}: {e.error}")
     raise HTTPException(500, str(e))
 
+
 router = APIRouter()
 
 KIBANA_READ_ONLY = "kibana_read_only"

@@ -32,7 +32,9 @@ def _fail(e: Exception) -> None:
     if isinstance(e, UserNotFoundError):
         console.print(f"[red]Error:[/red] {e}")
     elif isinstance(e, TransportError):
-        console.print(f"[red]Error:[/red] OpenSearch returned {e.status_code}: {e.error}")
+        console.print(
+            f"[red]Error:[/red] OpenSearch returned {e.status_code}: {e.error}"
+        )
     else:
         console.print(f"[red]Error:[/red] {e}")
     raise typer.Exit(1)
@@ -89,8 +91,7 @@ def create(
             os_svc.add_user_to_role_mapping(role, username)
 
         console.print(
-            f"[green]Created client user for "
-            f"[bold]{client_row.name}[/bold]:[/green]"
+            f"[green]Created client user for [bold]{client_row.name}[/bold]:[/green]"
         )
         _print_credentials(username, password)
     except Exception as e:
@@ -145,7 +146,9 @@ def disable(
             f"[green]Disabled user '{username}'.[/green] "
             f"Password changed and removed from roles: {', '.join(roles)}"
         )
-        console.print("To re-enable, run: dmarcmsp client user reset-password " + username)
+        console.print(
+            "To re-enable, run: dmarcmsp client user reset-password " + username
+        )
     except Exception as e:
         _fail(e)
 
