@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.2.1 2026-03-31
+
+### Added
+
+- **Separate bind IPs for nginx and Postfix** — new `HTTP_BIND_IP` and
+  `SMTP_BIND_IP` environment variables allow nginx and Postfix to listen on
+  different IP addresses. This lets you put the web interface behind Cloudflare
+  while SMTP uses an IP with matching forward/reverse DNS for deliverability.
+- **Docker Compose override example** — new `docker-compose.override.example.yml`
+  showing how to add extra nginx server blocks for other websites on the same
+  host.
+
+### Fixed
+
+- Resolved 6 ruff E501 (line too long) lint errors across API routers, CLI, and
+  services.
+
 ## 0.2.0 2026-03-30
 
 ### Added

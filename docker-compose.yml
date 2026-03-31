@@ -3,8 +3,8 @@ services:
     build: ./deploy/postfix
     container_name: parsedmarc-postfix
     ports:
-      - "25:25"
-      - "587:587"
+      - "${SMTP_BIND_IP:-0.0.0.0}:25:25"
+      - "${SMTP_BIND_IP:-0.0.0.0}:587:587"
     volumes:
       - maildir:/var/mail/dmarc
       - certs:/etc/letsencrypt:ro
@@ -96,8 +96,8 @@ services:
     build: ./deploy/nginx
     container_name: parsedmarc-nginx
     ports:
-      - "80:80"
-      - "443:443"
+      - "${HTTP_BIND_IP:-0.0.0.0}:80:80"
+      - "${HTTP_BIND_IP:-0.0.0.0}:443:443"
     volumes:
       - certs:/etc/letsencrypt
       - certbot-webroot:/var/www/certbot:ro
