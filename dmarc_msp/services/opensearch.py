@@ -6,7 +6,7 @@ import json
 import logging
 import secrets
 
-from opensearchpy import NotFoundError, OpenSearch, TransportError
+from opensearchpy import NotFoundError, OpenSearch
 
 from dmarc_msp.config import OpenSearchConfig
 
@@ -264,7 +264,8 @@ class OpenSearchService:
     ANALYST_ROLE = "analyst"
 
     def ensure_analyst_role(self) -> None:
-        """Create or update the analyst role with read-only access to all client tenants."""
+        """Create or update the analyst role with read-only
+        access to all client tenants."""
         body = {
             "cluster_permissions": [],
             "index_permissions": [

@@ -6,10 +6,9 @@ import json
 import secrets
 
 import typer
+from opensearchpy import TransportError
 from rich.console import Console
 from rich.table import Table
-
-from opensearchpy import TransportError
 
 from dmarc_msp.cli.helpers import get_opensearch_service, get_settings
 from dmarc_msp.services.opensearch import OpenSearchService, UserNotFoundError
@@ -82,7 +81,7 @@ def create(
         for role in roles:
             os_svc.add_user_to_role_mapping(role, username)
 
-        console.print(f"[green]Created analyst account:[/green]")
+        console.print("[green]Created analyst account:[/green]")
         _print_credentials(username, password)
     except Exception as e:
         _fail(e)
@@ -109,7 +108,7 @@ def reset_password(
                 f"[green]Re-enabled analyst '{username}'.[/green] "
                 f"Restored roles: {', '.join(restored)}"
             )
-        console.print(f"[green]Password reset for:[/green]")
+        console.print("[green]Password reset for:[/green]")
         _print_credentials(username, password)
     except Exception as e:
         _fail(e)

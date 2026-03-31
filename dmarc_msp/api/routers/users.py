@@ -66,7 +66,10 @@ def create_client_user(
         return UserCredentials(
             username=body.username,
             password=password,
-            message=f"Client user created for {client.name}. Save this password — it will not be shown again.",
+            message=(
+                f"Client user created for {client.name}."
+                " Save this password — it will not be shown again."
+            ),
         )
     except Exception as e:
         _handle_error(e)
@@ -124,7 +127,12 @@ def disable_user(username: str, os_svc: OpenSearchServiceDep):
     try:
         roles = os_svc.disable_user(username)
         return {
-            "message": f"Disabled '{username}'. Password changed and removed from roles: {', '.join(roles)}. Use reset-password to re-enable."
+            "message": (
+                f"Disabled '{username}'."
+                f" Password changed and removed from roles:"
+                f" {', '.join(roles)}."
+                " Use reset-password to re-enable."
+            )
         }
     except Exception as e:
         _handle_error(e)

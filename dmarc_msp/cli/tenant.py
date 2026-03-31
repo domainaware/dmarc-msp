@@ -139,7 +139,8 @@ def migrate_prefix(
         console.print(table)
         if dry_run:
             console.print(
-                f"\n{len(to_migrate)} tenant(s) would be migrated. Run without --dry-run to apply."
+                f"\n{len(to_migrate)} tenant(s) would be migrated."
+                " Run without --dry-run to apply."
             )
         else:
             console.print(f"\n{migrated}/{len(to_migrate)} tenant(s) migrated.")

@@ -49,7 +49,10 @@ def create_analyst(body: AnalystCreate, os_svc: OpenSearchServiceDep):
         return UserCredentials(
             username=body.username,
             password=password,
-            message="Analyst account created. Save this password — it will not be shown again.",
+            message=(
+                "Analyst account created."
+                " Save this password — it will not be shown again."
+            ),
         )
     except Exception as e:
         _handle_error(e)
@@ -95,7 +98,12 @@ def disable_analyst(username: str, os_svc: OpenSearchServiceDep):
     try:
         roles = os_svc.disable_user(username)
         return {
-            "message": f"Disabled '{username}'. Password changed and removed from roles: {', '.join(roles)}. Use reset-password to re-enable."
+            "message": (
+                f"Disabled '{username}'."
+                f" Password changed and removed from roles:"
+                f" {', '.join(roles)}."
+                " Use reset-password to re-enable."
+            )
         }
     except Exception as e:
         _handle_error(e)

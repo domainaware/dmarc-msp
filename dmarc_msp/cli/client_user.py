@@ -121,7 +121,7 @@ def reset_password(
                 f"[green]Re-enabled user '{username}'.[/green] "
                 f"Restored roles: {', '.join(restored)}"
             )
-        console.print(f"[green]Password reset for:[/green]")
+        console.print("[green]Password reset for:[/green]")
         _print_credentials(username, password)
     except Exception as e:
         _fail(e)
