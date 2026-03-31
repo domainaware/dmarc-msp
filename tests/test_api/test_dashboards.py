@@ -17,7 +17,7 @@ def test_import_dashboards(api_client_with_mocks):
     )
     assert resp.status_code == 200
     assert "acme corp" in resp.json()["message"]
-    mock_dash.import_for_client.assert_called_with("acme_corp", "acme_corp")
+    mock_dash.import_for_client.assert_called_with("client_acme_corp", "acme_corp")
 
 
 def test_import_dashboards_client_not_found(api_client_with_mocks):

@@ -17,7 +17,9 @@ rich_utils.STYLE_ERRORS_SUGGESTION = ""
 
 import typer  # noqa: E402
 
+from dmarc_msp.cli.analyst import app as analyst_app  # noqa: E402
 from dmarc_msp.cli.client import app as client_app  # noqa: E402
+from dmarc_msp.cli.client_user import app as client_user_app  # noqa: E402
 from dmarc_msp.cli.dashboard import app as dashboard_app  # noqa: E402
 from dmarc_msp.cli.domain import app as domain_app  # noqa: E402
 from dmarc_msp.cli.parsedmarc import app as parsedmarc_app  # noqa: E402
@@ -32,7 +34,9 @@ app = typer.Typer(
     no_args_is_help=True,
 )
 
+app.add_typer(analyst_app, name="analyst")
 app.add_typer(client_app, name="client")
+client_app.add_typer(client_user_app, name="user")
 app.add_typer(domain_app, name="domain")
 app.add_typer(tenant_app, name="tenant")
 app.add_typer(dashboard_app, name="dashboard")

@@ -89,7 +89,7 @@ def test_create_client_success(tmp_path):
     assert "tenant + role provisioned" in result.output
     assert "Dashboards" in result.output
     mock_os.health.assert_called_once()
-    mock_os.provision_tenant.assert_called_once_with("acme_corp", "acme_corp")
+    mock_os.provision_tenant.assert_called_once_with("client_acme_corp", "acme_corp")
     mock_dash.import_for_client.assert_called_once()
 
 

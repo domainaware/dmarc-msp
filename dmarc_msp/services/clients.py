@@ -41,7 +41,7 @@ class ClientService:
         name_lower = name.lower().strip()
         slug = slugify(name)
         index_prefix = (index_prefix or slug).lower().strip()
-        tenant_name = slug
+        tenant_name = f"client_{index_prefix}"
 
         existing = self.db.query(ClientRow).filter(ClientRow.name == name_lower).first()
         if existing:

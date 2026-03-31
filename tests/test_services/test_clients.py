@@ -15,7 +15,7 @@ def test_create_client(db_session: Session):
     client = svc.create("Acme Corp", contact_email="test@acme.com")
     assert client.name == "acme corp"
     assert client.index_prefix == "acme_corp"
-    assert client.tenant_name == "acme_corp"
+    assert client.tenant_name == "client_acme_corp"
     assert client.contact_email == "test@acme.com"
 
 
@@ -66,7 +66,7 @@ def test_rename_client(db_session: Session):
     client = svc.rename("Acme Corp", "Acme Inc")
     assert client.name == "acme inc"
     assert client.index_prefix == "acme_corp"  # unchanged
-    assert client.tenant_name == "acme_corp"  # unchanged
+    assert client.tenant_name == "client_acme_corp"  # unchanged
 
     # Old name no longer works
     with pytest.raises(ClientNotFoundError):

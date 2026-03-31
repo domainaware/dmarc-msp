@@ -1,5 +1,34 @@
 # Changelog
 
+## 0.2.0 2026-03-30
+
+### Added
+
+- **Analyst accounts** — new `analyst create/delete/disable/reset-password/list`
+  CLI commands and `/api/v1/analysts` API endpoints for managing read-only
+  analyst users with wildcard access to all client tenants.
+- **Client user accounts** — new `client user create/delete/disable/reset-password/list`
+  CLI commands and `/api/v1/clients/{name}/users` API endpoints for managing
+  per-client users scoped to a single tenant.
+- **OpenSearch internal user management** — `OpenSearchService` now supports
+  creating, deleting, disabling, and password-resetting internal users, plus
+  role mapping add/remove helpers.
+- **Analyst role provisioning** — `ensure_analyst_role()` creates a wildcard
+  role granting read access to all `client_*` tenants.
+- **Tenant prefix migration** — new `tenant migrate-prefix` CLI command to
+  rename existing tenants to use the `client_` prefix required for
+  wildcard-based analyst access. Supports `--dry-run`.
+
+### Changed
+
+- Tenant names now use a `client_` prefix (e.g., `client_acme_corp` instead of
+  `acme_corp`) to enable wildcard role patterns for analyst access.
+- Role names now match the tenant name directly instead of using a
+  `client_` prefix on the slug (role naming is unchanged in practice, but the
+  derivation is now consistent with the tenant name).
+- Deletion methods in `OpenSearchService` now catch `NotFoundError` instead of
+  bare `Exception` for more precise error handling.
+
 ## 0.1.1 2026-03-27
 
 ### Fixed

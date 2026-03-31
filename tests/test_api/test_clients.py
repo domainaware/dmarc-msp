@@ -21,7 +21,7 @@ def test_create_client_success(api_client_with_mocks):
     assert data["index_prefix"] == "acme_corp"
     assert data["contact_email"] == "test@acme.com"
     mock_os.health.assert_called_once()
-    mock_os.provision_tenant.assert_called_once_with("acme_corp", "acme_corp")
+    mock_os.provision_tenant.assert_called_once_with("client_acme_corp", "acme_corp")
     mock_dash.import_for_client.assert_called_once()
 
 

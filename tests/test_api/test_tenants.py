@@ -17,7 +17,7 @@ def test_provision_tenant(api_client_with_mocks):
     )
     assert resp.status_code == 200
     assert "acme_corp" in resp.json()["message"]
-    mock_os.provision_tenant.assert_called_with("acme_corp", "acme_corp")
+    mock_os.provision_tenant.assert_called_with("client_acme_corp", "acme_corp")
 
 
 def test_provision_tenant_not_found(api_client_with_mocks):
@@ -42,7 +42,7 @@ def test_deprovision_tenant(api_client_with_mocks):
     )
     assert resp.status_code == 200
     assert "acme_corp" in resp.json()["message"]
-    mock_os.deprovision_tenant.assert_called_with("acme_corp")
+    mock_os.deprovision_tenant.assert_called_with("client_acme_corp")
 
 
 def test_deprovision_tenant_not_found(api_client_with_mocks):

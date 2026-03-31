@@ -51,6 +51,28 @@ class DashboardImport(BaseModel):
     client_name: str
 
 
+class AnalystCreate(BaseModel):
+    username: str
+
+
+class ClientUserCreate(BaseModel):
+    username: str
+
+
+class UserCredentials(BaseModel):
+    username: str
+    password: str
+    message: str
+
+
+class UserInfo(BaseModel):
+    username: str
+    role_type: str
+    client_tenant: str | None = None
+    disabled: bool = False
+    description: str = ""
+
+
 class MessageResponse(BaseModel):
     message: str
 

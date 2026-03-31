@@ -7,12 +7,14 @@ from fastapi import FastAPI
 from dmarc_msp.api.dependencies import lifespan
 from dmarc_msp.api.middleware import IPAllowlistMiddleware
 from dmarc_msp.api.routers import (
+    analysts,
     clients,
     dashboards,
     domains,
     parsedmarc,
     retention,
     tenants,
+    users,
 )
 from dmarc_msp.config import Settings
 
@@ -41,9 +43,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
 
     # Register routers
+    app.include_router(analysts.router, prefix="/api/v1/analysts", tags=["analysts"])
     app.include_router(clients.router, prefix="/api/v1/clients", tags=["clients"])
     app.include_router(domains.router, prefix="/api/v1/domains", tags=["domains"])
     app.include_router(tenants.router, prefix="/api/v1/tenants", tags=["tenants"])
+    app.include_router(users.router, prefix="/api/v1", tags=["users"])
     app.include_router(
         dashboards.router, prefix="/api/v1/dashboard", tags=["dashboard"]
     )

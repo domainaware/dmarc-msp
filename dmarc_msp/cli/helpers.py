@@ -74,6 +74,10 @@ def get_onboarding_service(settings: Settings, db: Session) -> OnboardingService
     )
 
 
+def get_opensearch_service(settings: Settings) -> OpenSearchService:
+    return OpenSearchService(settings.opensearch)
+
+
 def get_offboarding_service(settings: Settings, db: Session) -> OffboardingService:
     dns_provider = get_dns_provider(settings)
     signaler = DockerSignaler(settings.parsedmarc.container)

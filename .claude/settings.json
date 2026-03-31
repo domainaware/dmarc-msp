@@ -16,7 +16,8 @@
       "Bash(curl -s 'https://developers.cloudflare.com/api/resources/dns/subresources/records/methods/list/')",
       "Bash(curl -s 'https://developers.cloudflare.com/api/resources/dns/subresources/records/methods/create/')",
       "WebFetch(domain:developers.cloudflare.com)",
-      "WebFetch(domain:docs.cloud.google.com)"
+      "WebFetch(domain:docs.cloud.google.com)",
+      "Bash(python -m pytest --tb=short -q)"
     ]
   }
 }
