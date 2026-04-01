@@ -32,7 +32,7 @@ def test_provision_tenant():
     assert calls[1][0][0] == "PUT"
     assert "client_acme_corp" in calls[1][0][1]
     body = calls[1][1]["body"]
-    assert body["index_permissions"][0]["index_patterns"] == ["acme_corp-*"]
+    assert body["index_permissions"][0]["index_patterns"] == ["acme_corp_*"]
     assert body["tenant_permissions"][0]["allowed_actions"] == ["kibana_all_read"]
 
 
@@ -67,7 +67,7 @@ def test_create_client_role():
     assert call[0][0] == "PUT"
     assert "client_acme_corp" in call[0][1]
     body = call[1]["body"]
-    assert body["index_permissions"][0]["index_patterns"] == ["acme-*"]
+    assert body["index_permissions"][0]["index_patterns"] == ["acme_*"]
     assert body["tenant_permissions"][0]["tenant_patterns"] == ["client_acme_corp"]
 
 
@@ -105,7 +105,7 @@ def test_create_role_mapping_without_backend_roles():
 def test_delete_client_indices():
     svc, mock_client = _make_service()
     svc.delete_client_indices("acme")
-    mock_client.indices.delete.assert_called_once_with(index="acme-*")
+    mock_client.indices.delete.assert_called_once_with(index="acme_*")
 
 
 def test_delete_client_indices_not_found():
@@ -295,7 +295,7 @@ def test_ensure_analyst_role():
     body = call[1]["body"]
     assert body["tenant_permissions"][0]["tenant_patterns"] == ["client_*"]
     assert body["tenant_permissions"][0]["allowed_actions"] == ["kibana_all_read"]
-    assert "*-dmarc_aggregate*" in body["index_permissions"][0]["index_patterns"]
+    assert "*_dmarc_aggregate*" in body["index_permissions"][0]["index_patterns"]
 
 
 def test_disable_user():

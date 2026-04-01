@@ -66,7 +66,7 @@ class OpenSearchService:
             "cluster_permissions": [],
             "index_permissions": [
                 {
-                    "index_patterns": [f"{index_prefix}-*"],
+                    "index_patterns": [f"{index_prefix}_*"],
                     "allowed_actions": [
                         "read",
                         "search",
@@ -131,7 +131,7 @@ class OpenSearchService:
 
     def delete_client_indices(self, index_prefix: str) -> None:
         """Delete all indices matching the client's prefix."""
-        pattern = f"{index_prefix}-*"
+        pattern = f"{index_prefix}_*"
         try:
             self.client.indices.delete(index=pattern)
             logger.info("Deleted indices matching: %s", pattern)
@@ -281,9 +281,9 @@ class OpenSearchService:
             "index_permissions": [
                 {
                     "index_patterns": [
-                        "*-dmarc_aggregate*",
-                        "*-dmarc_forensic*",
-                        "*-dmarc_smtp_tls*",
+                        "*_dmarc_aggregate*",
+                        "*_dmarc_forensic*",
+                        "*_dmarc_smtp_tls*",
                     ],
                     "allowed_actions": [
                         "read",

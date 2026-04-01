@@ -41,7 +41,7 @@ class RetentionService:
     def create_client_policy(self, index_prefix: str, retention_days: int) -> None:
         """Create an ISM policy for a specific client's indices."""
         policy_id = f"dmarc_retention_{index_prefix}"
-        index_pattern = f"{index_prefix}-*"
+        index_pattern = f"{index_prefix}_*"
         self._create_policy(policy_id, retention_days, index_pattern)
 
     def delete_client_policy(self, index_prefix: str) -> None:

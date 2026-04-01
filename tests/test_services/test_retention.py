@@ -37,7 +37,7 @@ def test_create_client_policy():
     assert "dmarc_retention_acme" in call[0][1]
     body = call[1]["body"]
     assert "365d" in str(body)
-    assert "acme-*" in str(body)
+    assert "acme_*" in str(body)
 
 
 def test_delete_client_policy():
