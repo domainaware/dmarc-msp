@@ -54,7 +54,7 @@ services:
 Apply the change so the file is visible inside the container:
 
 ```bash
-docker compose up -d nginx
+docker compose up -d --build nginx
 ```
 
 Verify that nginx accepted the config with no errors:
@@ -136,5 +136,5 @@ unique — choose a name that does not conflict with other server blocks.
 ### Step 5 — Reload nginx to apply the HTTPS config
 
 ```bash
-docker compose kill -s HUP parsedmarc-nginx
+docker compose up -d --build nginx
 ```
