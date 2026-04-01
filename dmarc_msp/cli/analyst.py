@@ -20,6 +20,7 @@ from dmarc_msp.services.opensearch import (
 app = typer.Typer(help="Analyst account management.", no_args_is_help=True)
 console = Console()
 
+KIBANA_USER = "kibana_user"
 KIBANA_READ_ONLY = "kibana_read_only"
 
 
@@ -67,7 +68,7 @@ def create(
         console.print(f"[red]Error:[/red] Cannot connect to OpenSearch: {e}")
         raise typer.Exit(1)
 
-    roles = [OpenSearchService.ANALYST_ROLE, KIBANA_READ_ONLY]
+    roles = [OpenSearchService.ANALYST_ROLE, KIBANA_USER, KIBANA_READ_ONLY]
     password = _generate_password()
 
     try:

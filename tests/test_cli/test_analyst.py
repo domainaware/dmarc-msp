@@ -46,8 +46,8 @@ def test_analyst_create(tmp_path):
     assert "Password" in result.output
     mock_os.ensure_analyst_role.assert_called_once()
     mock_os.create_internal_user.assert_called_once()
-    # Should map to both analyst and kibana_read_only roles
-    assert mock_os.add_user_to_role_mapping.call_count == 2
+    # Should map to analyst, kibana_user, and kibana_read_only roles
+    assert mock_os.add_user_to_role_mapping.call_count == 3
 
 
 def test_analyst_create_opensearch_unreachable(tmp_path):

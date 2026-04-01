@@ -21,6 +21,7 @@ from dmarc_msp.services.opensearch import UserAlreadyExistsError, UserNotFoundEr
 app = typer.Typer(help="Client user account management.", no_args_is_help=True)
 console = Console()
 
+KIBANA_USER = "kibana_user"
 KIBANA_READ_ONLY = "kibana_read_only"
 
 
@@ -73,7 +74,7 @@ def create(
             console.print(f"[red]Error:[/red] Cannot connect to OpenSearch: {e}")
             raise typer.Exit(1)
 
-        roles = [client_row.tenant_name, KIBANA_READ_ONLY]
+        roles = [client_row.tenant_name, KIBANA_USER, KIBANA_READ_ONLY]
         password = _generate_password()
 
         os_svc.create_internal_user(

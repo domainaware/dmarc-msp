@@ -28,6 +28,7 @@ def _handle_error(e: Exception) -> None:
 
 router = APIRouter()
 
+KIBANA_USER = "kibana_user"
 KIBANA_READ_ONLY = "kibana_read_only"
 
 
@@ -47,7 +48,7 @@ def create_client_user(
     except ClientNotFoundError as e:
         raise HTTPException(404, str(e))
 
-    roles = [client.tenant_name, KIBANA_READ_ONLY]
+    roles = [client.tenant_name, KIBANA_USER, KIBANA_READ_ONLY]
     password = secrets.token_urlsafe(24)
 
     try:

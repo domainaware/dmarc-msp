@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.6 2026-04-01
+
+### Fixed
+
+- Analyst and client user accounts are now assigned the `kibana_user` role, fixing "Application Not Found" on the Dashboards overview page. `kibana_read_only` alone is a UI modifier that hides edit controls — `kibana_user` provides the actual cluster and index permissions needed to use Dashboards.
+- Reverted the Global tenant permission added in 0.2.3, as it was not the actual cause.
+
 ## 0.2.5 2026-04-01
 
 ### Fixed

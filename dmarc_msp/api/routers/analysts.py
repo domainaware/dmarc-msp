@@ -29,12 +29,13 @@ def _handle_error(e: Exception) -> None:
 
 router = APIRouter()
 
+KIBANA_USER = "kibana_user"
 KIBANA_READ_ONLY = "kibana_read_only"
 
 
 @router.post("", response_model=UserCredentials, status_code=201)
 def create_analyst(body: AnalystCreate, os_svc: OpenSearchServiceDep):
-    roles = [OpenSearchService.ANALYST_ROLE, KIBANA_READ_ONLY]
+    roles = [OpenSearchService.ANALYST_ROLE, KIBANA_USER, KIBANA_READ_ONLY]
     password = secrets.token_urlsafe(24)
 
     try:
