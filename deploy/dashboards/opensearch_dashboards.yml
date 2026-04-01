@@ -21,10 +21,5 @@ data_source.enabled: false
 workspace.enabled: false
 explore.enabled: false
 
-# OSD 3.x default landing page requires the workspace plugin. Since workspace
-# is disabled for multi-tenancy, override the default route to the dashboards
-# listing page.
-uiSettings.overrides.defaultRoute: "/app/dashboards"
-
 # Add custom settings below
 
