@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.4 2026-04-01
+
+### Changed
+
+- Password display message now prompts admins to ask users to change their password at first login.
+
 ## 0.2.3 2026-04-01
 
 ### Fixed

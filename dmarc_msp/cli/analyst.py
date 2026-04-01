@@ -42,8 +42,9 @@ def _print_credentials(username: str, password: str) -> None:
         "[yellow]Save this password now — it will not be shown again.[/yellow]"
     )
     console.print(
-        "[yellow]OpenSearch Dashboards does not support forced password "
-        "change on first login.[/yellow]"
+        "[yellow]Please ask the user to change their password at their "
+        "first login. OpenSearch Dashboards does not support forced "
+        "password change on first login.[/yellow]"
     )
 
 
