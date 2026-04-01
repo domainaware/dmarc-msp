@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.2 2026-04-01
+
+### Fixed
+
+- `docker kill` hook used by `certbot` after successful certificate renewals now correctly uses the service name, not the container name.
+
 ## 0.2.1 2026-03-31
 
 ### Added

@@ -27,7 +27,7 @@ fi
 
 while :; do
     certbot renew --quiet \
-        --deploy-hook "docker kill -s HUP parsedmarc-nginx && docker kill -s HUP parsedmarc-postfix"
+        --deploy-hook "docker kill -s HUP nginx && docker kill -s HUP postfix"
     sleep 12h &
     wait $!
 done
