@@ -12,6 +12,7 @@ domain_map.yaml
 docker-compose.override.yml
 deploy/nginx/extra/*
 !deploy/nginx/extra/.gitkeep
+!deploy/nginx/extra/README.md
 *.db
 
 # Python
