@@ -67,13 +67,7 @@ class OpenSearchService:
             "index_permissions": [
                 {
                     "index_patterns": [f"{index_prefix}_*"],
-                    "allowed_actions": [
-                        "read",
-                        "search",
-                        "get",
-                        "indices:data/read/*",
-                        "indices:admin/mappings/get",
-                    ],
+                    "allowed_actions": ["read"],
                 }
             ],
             "tenant_permissions": [
@@ -285,13 +279,7 @@ class OpenSearchService:
                         "*_dmarc_forensic*",
                         "*_dmarc_smtp_tls*",
                     ],
-                    "allowed_actions": [
-                        "read",
-                        "search",
-                        "get",
-                        "indices:data/read/*",
-                        "indices:admin/mappings/get",
-                    ],
+                    "allowed_actions": ["read"],
                 }
             ],
             "tenant_permissions": [
