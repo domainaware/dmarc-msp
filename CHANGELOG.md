@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.3 2026-04-01
+
+### Fixed
+
+- Analyst and client user roles now include read access to the Global tenant, fixing "Application Not Found" on the Dashboards overview page after login.
+
 ## 0.2.2 2026-04-01
 
 ### Fixed

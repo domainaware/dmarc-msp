@@ -76,7 +76,11 @@ class OpenSearchService:
                 {
                     "tenant_patterns": [tenant_name],
                     "allowed_actions": ["kibana_all_read"],
-                }
+                },
+                {
+                    "tenant_patterns": ["global_tenant"],
+                    "allowed_actions": ["kibana_all_read"],
+                },
             ],
         }
         self.client.transport.perform_request(
@@ -288,7 +292,11 @@ class OpenSearchService:
                 {
                     "tenant_patterns": ["client_*"],
                     "allowed_actions": ["kibana_all_read"],
-                }
+                },
+                {
+                    "tenant_patterns": ["global_tenant"],
+                    "allowed_actions": ["kibana_all_read"],
+                },
             ],
         }
         self.client.transport.perform_request(
