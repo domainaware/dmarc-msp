@@ -57,19 +57,13 @@ Apply the change so the file is visible inside the container:
 docker compose up -d nginx
 ```
 
-### Step 3 — Reload nginx to apply the new config
-
-```bash
-docker compose kill -s HUP parsedmarc-nginx
-```
-
 Verify that nginx accepted the config with no errors:
 
 ```bash
 docker compose logs --tail=20 nginx
 ```
 
-### Step 4 — Request the certificate
+### Step 3 — Request the certificate
 
 Use the certbot container that is already running in this stack:
 
@@ -83,7 +77,7 @@ docker compose exec certbot certbot certonly \
 Certbot writes the certificate to the shared `certs` volume at
 `/etc/letsencrypt/live/myapp.example.com/`.
 
-### Step 5 — Update the config to HTTPS
+### Step 4 — Update the config to HTTPS
 
 Replace the contents of `deploy/nginx/extra/myapp.conf` with a full HTTP + HTTPS
 config. Use `resolver 127.0.0.11` and a `set $backend` variable for the upstream
@@ -139,7 +133,7 @@ Replace `myapp` with the Docker Compose service name of your backend and `8080`
 with the port it listens on. The `shared:SSL_MYAPP:10m` cache zone name must be
 unique — choose a name that does not conflict with other server blocks.
 
-### Step 6 — Reload nginx to apply the HTTPS config
+### Step 5 — Reload nginx to apply the HTTPS config
 
 ```bash
 docker compose kill -s HUP parsedmarc-nginx
