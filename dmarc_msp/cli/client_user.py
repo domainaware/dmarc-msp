@@ -16,7 +16,7 @@ from dmarc_msp.cli.helpers import (
     get_settings,
 )
 from dmarc_msp.services.clients import ClientService
-from dmarc_msp.services.opensearch import UserNotFoundError
+from dmarc_msp.services.opensearch import UserAlreadyExistsError, UserNotFoundError
 
 app = typer.Typer(help="Client user account management.", no_args_is_help=True)
 console = Console()
@@ -29,7 +29,7 @@ def _generate_password() -> str:
 
 
 def _fail(e: Exception) -> None:
-    if isinstance(e, UserNotFoundError):
+    if isinstance(e, (UserNotFoundError, UserAlreadyExistsError)):
         console.print(f"[red]Error:[/red] {e}")
     elif isinstance(e, TransportError):
         console.print(

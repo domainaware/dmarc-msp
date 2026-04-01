@@ -11,10 +11,12 @@ from opensearchpy import TransportError
 from dmarc_msp.api.dependencies import ClientServiceDep, OpenSearchServiceDep
 from dmarc_msp.api.schemas import ClientUserCreate, UserCredentials, UserInfo
 from dmarc_msp.services.clients import ClientNotFoundError
-from dmarc_msp.services.opensearch import UserNotFoundError
+from dmarc_msp.services.opensearch import UserAlreadyExistsError, UserNotFoundError
 
 
 def _handle_error(e: Exception) -> None:
+    if isinstance(e, UserAlreadyExistsError):
+        raise HTTPException(409, str(e))
     if isinstance(e, UserNotFoundError):
         raise HTTPException(404, str(e))
     if isinstance(e, ClientNotFoundError):

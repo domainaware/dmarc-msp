@@ -17,6 +17,10 @@ class UserNotFoundError(Exception):
     pass
 
 
+class UserAlreadyExistsError(Exception):
+    pass
+
+
 class OpenSearchService:
     """Manages OpenSearch tenants, roles, and role mappings for client isolation."""
 
@@ -153,6 +157,12 @@ class OpenSearchService:
         description: str = "",
     ) -> None:
         """Create an OpenSearch internal user."""
+        all_users = self.client.transport.perform_request(
+            "GET",
+            "/_plugins/_security/api/internalusers/",
+        )
+        if username in all_users:
+            raise UserAlreadyExistsError(f"User '{username}' already exists")
         body: dict = {
             "password": password,
             "backend_roles": backend_roles or [],

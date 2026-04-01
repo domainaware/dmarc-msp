@@ -10,10 +10,16 @@ from opensearchpy import TransportError
 
 from dmarc_msp.api.dependencies import OpenSearchServiceDep
 from dmarc_msp.api.schemas import AnalystCreate, UserCredentials, UserInfo
-from dmarc_msp.services.opensearch import OpenSearchService, UserNotFoundError
+from dmarc_msp.services.opensearch import (
+    OpenSearchService,
+    UserAlreadyExistsError,
+    UserNotFoundError,
+)
 
 
 def _handle_error(e: Exception) -> None:
+    if isinstance(e, UserAlreadyExistsError):
+        raise HTTPException(409, str(e))
     if isinstance(e, UserNotFoundError):
         raise HTTPException(404, str(e))
     if isinstance(e, TransportError):
