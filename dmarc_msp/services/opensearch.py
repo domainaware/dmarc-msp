@@ -277,7 +277,7 @@ class OpenSearchService:
                     "index_patterns": [
                         "*_dmarc_aggregate*",
                         "*_dmarc_forensic*",
-                        "*_dmarc_smtp_tls*",
+                        "*_smtp_tls*",
                     ],
                     "allowed_actions": ["read", "search", "get"],
                 }
