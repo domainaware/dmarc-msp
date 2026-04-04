@@ -51,6 +51,11 @@ class DashboardImport(BaseModel):
     client_name: str
 
 
+class DashboardDarkMode(BaseModel):
+    client_name: str
+    enabled: bool
+
+
 class AnalystCreate(BaseModel):
     username: str
 

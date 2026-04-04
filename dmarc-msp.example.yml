@@ -114,6 +114,11 @@ dashboards:
   # Update this file when parsedmarc releases new dashboard versions.
   saved_objects_template: /etc/dmarc-msp/opensearch_dashboards.ndjson
 
+  # Automatically enable dark mode in each client's tenant when
+  # dashboards are imported. Clients can override this individually
+  # via: dmarcmsp dashboard dark-mode "<client>" false
+  dark_mode: true
+
 # ---------------------------------------------------------------------------
 # parsedmarc integration
 # ---------------------------------------------------------------------------

@@ -44,6 +44,7 @@ class OpenSearchConfig(BaseModel):
 class DashboardsConfig(BaseModel):
     url: str = "http://opensearch-dashboards:5601"
     saved_objects_template: str = "/etc/dmarc-msp/opensearch_dashboards.ndjson"
+    dark_mode: bool = True
 
 
 class ParsedmarcConfig(BaseModel):

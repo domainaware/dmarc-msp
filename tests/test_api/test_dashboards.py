@@ -29,6 +29,41 @@ def test_import_dashboards_client_not_found(api_client_with_mocks):
     assert resp.status_code == 404
 
 
+def test_dark_mode_enable(api_client_with_mocks):
+    create_test_client(api_client_with_mocks, "Acme Corp")
+    client, _, mock_dash, _ = api_client_with_mocks
+    mock_dash.reset_mock()
+    resp = client.post(
+        "/api/v1/dashboard/dark-mode",
+        json={"client_name": "Acme Corp", "enabled": True},
+    )
+    assert resp.status_code == 200
+    assert "enabled" in resp.json()["message"]
+    mock_dash.set_dark_mode.assert_called_with("client_acme_corp", True)
+
+
+def test_dark_mode_disable(api_client_with_mocks):
+    create_test_client(api_client_with_mocks, "Acme Corp")
+    client, _, mock_dash, _ = api_client_with_mocks
+    mock_dash.reset_mock()
+    resp = client.post(
+        "/api/v1/dashboard/dark-mode",
+        json={"client_name": "Acme Corp", "enabled": False},
+    )
+    assert resp.status_code == 200
+    assert "disabled" in resp.json()["message"]
+    mock_dash.set_dark_mode.assert_called_with("client_acme_corp", False)
+
+
+def test_dark_mode_client_not_found(api_client_with_mocks):
+    client, *_ = api_client_with_mocks
+    resp = client.post(
+        "/api/v1/dashboard/dark-mode",
+        json={"client_name": "Nonexistent", "enabled": True},
+    )
+    assert resp.status_code == 404
+
+
 def test_import_dashboards_template_missing(api_client_with_mocks):
     create_test_client(api_client_with_mocks, "Acme Corp")
     client, _, mock_dash, _ = api_client_with_mocks

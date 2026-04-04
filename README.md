@@ -216,6 +216,10 @@ dmarcmsp tenant deprovision "Acme Corp"
 # Re-import dashboards for a single client
 dmarcmsp dashboard import "Acme Corp"
 
+# Toggle dark mode for a client (on by default after import)
+dmarcmsp dashboard dark-mode "Acme Corp" false
+dmarcmsp dashboard dark-mode "Acme Corp" true
+
 # Reload parsedmarc config
 dmarcmsp parsedmarc reload
 

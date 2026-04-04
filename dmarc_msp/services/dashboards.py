@@ -29,6 +29,7 @@ class DashboardService:
         self.dashboards_url = dashboards_config.url.rstrip("/")
         self.template_path = Path(dashboards_config.saved_objects_template)
         self.auth = (opensearch_config.username, opensearch_config.resolved_password)
+        self.dark_mode = dashboards_config.dark_mode
 
     def import_for_client(self, tenant_name: str, index_prefix: str) -> None:
         """Rewrite the template NDJSON with the client's index prefix
@@ -40,9 +41,28 @@ class DashboardService:
 
         rewritten = self._rewrite_template(index_prefix)
         self._import_saved_objects(tenant_name, rewritten)
+        if self.dark_mode:
+            self.set_dark_mode(tenant_name, enabled=True)
         logger.info(
             "Imported dashboards for tenant=%s prefix=%s", tenant_name, index_prefix
         )
+
+    def set_dark_mode(self, tenant_name: str, enabled: bool = True) -> None:
+        """Set dark mode in a tenant's advanced settings."""
+        url = f"{self.dashboards_url}/api/opensearch-dashboards/settings"
+        headers = {
+            "osd-xsrf": "true",
+            "securitytenant": tenant_name,
+        }
+        with httpx.Client(verify=False, auth=self.auth, timeout=30) as client:
+            response = client.post(
+                url,
+                headers=headers,
+                json={"changes": {"theme:darkMode": enabled}},
+            )
+            response.raise_for_status()
+        state = "enabled" if enabled else "disabled"
+        logger.info("Dark mode %s for tenant=%s", state, tenant_name)
 
     def _rewrite_template(self, index_prefix: str) -> str:
         """Prepend the client's index prefix to all known index patterns."""

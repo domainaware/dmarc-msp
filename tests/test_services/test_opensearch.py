@@ -32,7 +32,16 @@ def test_provision_tenant():
     assert calls[1][0][0] == "PUT"
     assert "client_acme_corp" in calls[1][0][1]
     body = calls[1][1]["body"]
-    assert body["index_permissions"][0]["index_patterns"] == ["acme_corp_*"]
+    assert body["cluster_permissions"] == [
+        "cluster:admin/opensearch/ql/datasources/read",
+        "cluster_composite_ops_ro",
+    ]
+    assert body["index_permissions"][0]["index_patterns"] == [
+        "acme_corp_dmarc_aggregate*",
+        "acme_corp_dmarc_fo*",
+        "acme_corp_smtp_tls*",
+    ]
+    assert body["index_permissions"][0]["allowed_actions"] == ["read"]
     assert body["tenant_permissions"][0]["allowed_actions"] == ["kibana_all_read"]
 
 
@@ -67,7 +76,16 @@ def test_create_client_role():
     assert call[0][0] == "PUT"
     assert "client_acme_corp" in call[0][1]
     body = call[1]["body"]
-    assert body["index_permissions"][0]["index_patterns"] == ["acme_*"]
+    assert body["cluster_permissions"] == [
+        "cluster:admin/opensearch/ql/datasources/read",
+        "cluster_composite_ops_ro",
+    ]
+    assert body["index_permissions"][0]["index_patterns"] == [
+        "acme_dmarc_aggregate*",
+        "acme_dmarc_fo*",
+        "acme_smtp_tls*",
+    ]
+    assert body["index_permissions"][0]["allowed_actions"] == ["read"]
     assert body["tenant_permissions"][0]["tenant_patterns"] == ["client_acme_corp"]
 
 
@@ -293,9 +311,18 @@ def test_ensure_analyst_role():
     call = mock_client.transport.perform_request.call_args
     assert call[0] == ("PUT", "/_plugins/_security/api/roles/analyst")
     body = call[1]["body"]
+    assert body["cluster_permissions"] == [
+        "cluster:admin/opensearch/ql/datasources/read",
+        "cluster_composite_ops_ro",
+    ]
+    assert body["index_permissions"][0]["index_patterns"] == [
+        "*_dmarc_aggregate*",
+        "*_dmarc_fo*",
+        "*_smtp_tls*",
+    ]
+    assert body["index_permissions"][0]["allowed_actions"] == ["read"]
     assert body["tenant_permissions"][0]["tenant_patterns"] == ["client_*"]
     assert body["tenant_permissions"][0]["allowed_actions"] == ["kibana_all_read"]
-    assert "*_dmarc_aggregate*" in body["index_permissions"][0]["index_patterns"]
 
 
 def test_disable_user():

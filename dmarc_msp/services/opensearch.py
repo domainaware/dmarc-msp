@@ -63,11 +63,18 @@ class OpenSearchService:
         """Create a role scoped to the client's index prefix and tenant."""
         role_name = tenant_name
         body = {
-            "cluster_permissions": [],
+            "cluster_permissions": [
+                "cluster:admin/opensearch/ql/datasources/read",
+                "cluster_composite_ops_ro",
+            ],
             "index_permissions": [
                 {
-                    "index_patterns": [f"{index_prefix}_*"],
-                    "allowed_actions": ["read", "search", "get"],
+                    "index_patterns": [
+                        f"{index_prefix}_dmarc_aggregate*",
+                        f"{index_prefix}_dmarc_fo*",
+                        f"{index_prefix}_smtp_tls*",
+                    ],
+                    "allowed_actions": ["read"],
                 }
             ],
             "tenant_permissions": [
@@ -271,15 +278,18 @@ class OpenSearchService:
         """Create or update the analyst role with read-only
         access to all client tenants."""
         body = {
-            "cluster_permissions": [],
+            "cluster_permissions": [
+                "cluster:admin/opensearch/ql/datasources/read",
+                "cluster_composite_ops_ro",
+            ],
             "index_permissions": [
                 {
                     "index_patterns": [
                         "*_dmarc_aggregate*",
-                        "*_dmarc_forensic*",
+                        "*_dmarc_fo*",
                         "*_smtp_tls*",
                     ],
-                    "allowed_actions": ["read", "search", "get"],
+                    "allowed_actions": ["read"],
                 }
             ],
             "tenant_permissions": [

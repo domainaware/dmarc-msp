@@ -101,11 +101,87 @@ def test_import_for_client_success(tmp_path):
         mock_client_cls.return_value = mock_client
 
         svc.import_for_client("acme_tenant", "acme_corp")
+        assert mock_client.post.call_count == 2
+        import_call = mock_client.post.call_args_list[0]
+        assert "securitytenant" in import_call.kwargs.get(
+            "headers", import_call[1].get("headers", {})
+        )
+
+
+def test_import_for_client_enables_dark_mode_by_default(tmp_path):
+    svc = _make_template(tmp_path)
+    mock_response = MagicMock()
+    mock_response.json.return_value = {"success": True}
+    mock_response.raise_for_status = MagicMock()
+
+    with patch("dmarc_msp.services.dashboards.httpx.Client") as mock_client_cls:
+        mock_client = MagicMock()
+        mock_client.__enter__ = MagicMock(return_value=mock_client)
+        mock_client.__exit__ = MagicMock(return_value=False)
+        mock_client.post.return_value = mock_response
+        mock_client_cls.return_value = mock_client
+
+        svc.import_for_client("acme_tenant", "acme_corp")
+        # Two calls: saved objects import + dark mode settings
+        assert mock_client.post.call_count == 2
+        dark_mode_call = mock_client.post.call_args_list[1]
+        assert "settings" in dark_mode_call.args[0]
+        assert dark_mode_call.kwargs["json"] == {
+            "changes": {"theme:darkMode": True}
+        }
+
+
+def test_import_for_client_skips_dark_mode_when_disabled(tmp_path):
+    template = tmp_path / "dashboards.ndjson"
+    template.write_text(
+        json.dumps(
+            {"type": "index-pattern", "attributes": {"title": "dmarc_aggregate*"}}
+        )
+        + "\n"
+    )
+    dash_config = DashboardsConfig(
+        url="http://localhost:5601",
+        saved_objects_template=str(template),
+        dark_mode=False,
+    )
+    os_config = OpenSearchConfig(password="test_password")
+    svc = DashboardService(dash_config, os_config)
+
+    mock_response = MagicMock()
+    mock_response.json.return_value = {"success": True}
+    mock_response.raise_for_status = MagicMock()
+
+    with patch("dmarc_msp.services.dashboards.httpx.Client") as mock_client_cls:
+        mock_client = MagicMock()
+        mock_client.__enter__ = MagicMock(return_value=mock_client)
+        mock_client.__exit__ = MagicMock(return_value=False)
+        mock_client.post.return_value = mock_response
+        mock_client_cls.return_value = mock_client
+
+        svc.import_for_client("acme_tenant", "acme_corp")
+        # Only saved objects import, no dark mode call
+        assert mock_client.post.call_count == 1
+
+
+def test_set_dark_mode(tmp_path):
+    svc = _make_template(tmp_path)
+    mock_response = MagicMock()
+    mock_response.raise_for_status = MagicMock()
+
+    with patch("dmarc_msp.services.dashboards.httpx.Client") as mock_client_cls:
+        mock_client = MagicMock()
+        mock_client.__enter__ = MagicMock(return_value=mock_client)
+        mock_client.__exit__ = MagicMock(return_value=False)
+        mock_client.post.return_value = mock_response
+        mock_client_cls.return_value = mock_client
+
+        svc.set_dark_mode("acme_tenant")
         mock_client.post.assert_called_once()
         call_kwargs = mock_client.post.call_args
-        assert "securitytenant" in call_kwargs.kwargs.get(
-            "headers", call_kwargs[1].get("headers", {})
-        )
+        assert call_kwargs.kwargs["headers"]["securitytenant"] == "acme_tenant"
+        assert call_kwargs.kwargs["json"] == {
+            "changes": {"theme:darkMode": True}
+        }
 
 
 def test_import_for_client_api_failure(tmp_path):

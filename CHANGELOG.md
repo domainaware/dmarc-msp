@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.7 2026-04-03
+
+### Fixed
+
+- Analyst and client roles now include cluster permissions (`cluster:admin/opensearch/ql/datasources/read`, `cluster_composite_ops_ro`) required for Dashboards queries.
+- Fixed forensic index pattern from `*_dmarc_forensic*` to `*_dmarc_fo*` to match the actual index names created by parsedmarc.
+- Client role index patterns are now explicit per-index-type (`{prefix}_dmarc_aggregate*`, `{prefix}_dmarc_fo*`, `{prefix}_smtp_tls*`) instead of a broad `{prefix}_*` wildcard.
+- Simplified index permissions to the `read` action group instead of listing individual actions.
+
 ## 0.2.6 2026-04-01
 
 ### Fixed
