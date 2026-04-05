@@ -15,7 +15,7 @@ mkdir -p /etc/nginx/conf.d
 
 if [ -f "$CERT" ]; then
     echo "TLS certificates found — starting with HTTPS"
-    envsubst '$MSP_DOMAIN' < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf
+    envsubst '$MSP_DOMAIN $DNS_RESOLVER' < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf
 else
     echo "No TLS certificates — starting HTTP-only (ACME challenges + waiting for certbot)"
     envsubst '$MSP_DOMAIN' < /etc/nginx/nginx-http-only.conf.template > /etc/nginx/nginx.conf
@@ -58,7 +58,7 @@ fi
 
         if [ "$NEED_MAIN" = true ] && [ -f "$CERT" ]; then
             echo "Certificates detected — switching to HTTPS"
-            envsubst '$MSP_DOMAIN' < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf
+            envsubst '$MSP_DOMAIN $DNS_RESOLVER' < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf
             NEED_MAIN=false
             nginx -s reload
         fi

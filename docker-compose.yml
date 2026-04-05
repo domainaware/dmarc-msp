@@ -104,6 +104,7 @@ services:
       - ./.well-known:/var/www/well-known/.well-known:ro
     environment:
       - MSP_DOMAIN=${MSP_DOMAIN:-dmarc.msp-example.com}
+      - DNS_RESOLVER=${DNS_RESOLVER:-127.0.0.11}
     networks:
       - frontend
     restart: unless-stopped
