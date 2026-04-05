@@ -209,7 +209,7 @@ class OpenSearchService:
         self.client.transport.perform_request(
             "PATCH",
             f"/_plugins/_security/api/internalusers/{username}",
-            body={"password": password},
+            body=[{"op": "replace", "path": "/password", "value": password}],
         )
         logger.info("Reset password for internal user: %s", username)
 
@@ -221,7 +221,7 @@ class OpenSearchService:
         self.client.transport.perform_request(
             "PATCH",
             f"/_plugins/_security/api/internalusers/{username}",
-            body={"attributes": attributes},
+            body=[{"op": "replace", "path": "/attributes", "value": attributes}],
         )
 
     # ── Role mapping helpers ──────────────────────────────────────────

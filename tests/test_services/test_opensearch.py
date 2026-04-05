@@ -244,7 +244,9 @@ def test_update_internal_user_password():
         "PATCH",
         "/_plugins/_security/api/internalusers/analyst1",
     )
-    assert patch_call[1]["body"] == {"password": "newpass"}
+    assert patch_call[1]["body"] == [
+        {"op": "replace", "path": "/password", "value": "newpass"}
+    ]
 
 
 def test_add_user_to_role_mapping_creates_new():
