@@ -101,7 +101,7 @@ def test_import_for_client_success(tmp_path):
         mock_client_cls.return_value = mock_client
 
         svc.import_for_client("acme_tenant", "acme_corp")
-        assert mock_client.post.call_count == 2
+        assert mock_client.post.call_count == 3
         import_call = mock_client.post.call_args_list[0]
         assert "securitytenant" in import_call.kwargs.get(
             "headers", import_call[1].get("headers", {})
@@ -122,9 +122,9 @@ def test_import_for_client_enables_dark_mode_by_default(tmp_path):
         mock_client_cls.return_value = mock_client
 
         svc.import_for_client("acme_tenant", "acme_corp")
-        # Two calls: saved objects import + dark mode settings
-        assert mock_client.post.call_count == 2
-        dark_mode_call = mock_client.post.call_args_list[1]
+        # Three calls: saved objects import + default route + dark mode
+        assert mock_client.post.call_count == 3
+        dark_mode_call = mock_client.post.call_args_list[2]
         assert "settings" in dark_mode_call.args[0]
         assert dark_mode_call.kwargs["json"] == {
             "changes": {"theme:darkMode": True}
@@ -159,8 +159,8 @@ def test_import_for_client_skips_dark_mode_when_disabled(tmp_path):
         mock_client_cls.return_value = mock_client
 
         svc.import_for_client("acme_tenant", "acme_corp")
-        # Only saved objects import, no dark mode call
-        assert mock_client.post.call_count == 1
+        # Saved objects import + default route, no dark mode call
+        assert mock_client.post.call_count == 2
 
 
 def test_set_dark_mode(tmp_path):
