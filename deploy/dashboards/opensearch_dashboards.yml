@@ -21,5 +21,8 @@ data_source.enabled: false
 workspace.enabled: false
 explore.enabled: false
 
+# Show dashboard listing after login instead of the home page
+uiSettings.overrides.defaultRoute: /app/dashboards
+
 # Add custom settings below
 

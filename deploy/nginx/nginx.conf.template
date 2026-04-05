@@ -80,5 +80,10 @@ http {
             proxy_buffering off;
             proxy_read_timeout 90s;
         }
+
+        # Redirect home app (that non-admins can't use) to dashboards
+        location = /app/home {
+          return 302 /app/dashboards;
+        }
     }
 }
