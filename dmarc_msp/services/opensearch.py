@@ -205,16 +205,11 @@ class OpenSearchService:
 
     def update_internal_user_password(self, username: str, password: str) -> None:
         """Update an internal user's password."""
-        user = self._check_user_exists(username)
-        body = {
-            "password": password,
-            "backend_roles": user.get("backend_roles", []),
-            "attributes": user.get("attributes", {}),
-        }
+        self._check_user_exists(username)
         self.client.transport.perform_request(
-            "PUT",
+            "PATCH",
             f"/_plugins/_security/api/internalusers/{username}",
-            body=body,
+            body={"password": password},
         )
         logger.info("Reset password for internal user: %s", username)
 
@@ -222,15 +217,11 @@ class OpenSearchService:
         self, username: str, attributes: dict[str, str]
     ) -> None:
         """Update an internal user's attributes."""
-        user = self._check_user_exists(username)
-        body = {
-            "backend_roles": user.get("backend_roles", []),
-            "attributes": attributes,
-        }
+        self._check_user_exists(username)
         self.client.transport.perform_request(
-            "PUT",
+            "PATCH",
             f"/_plugins/_security/api/internalusers/{username}",
-            body=body,
+            body={"attributes": attributes},
         )
 
     # ── Role mapping helpers ──────────────────────────────────────────
