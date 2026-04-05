@@ -235,18 +235,20 @@ def test_list_internal_users():
 def test_update_internal_user_password():
     svc, mock_client = _make_service()
     mock_client.transport.perform_request.side_effect = [
-        {"analyst1": {"attributes": {}}},  # _check_user_exists
-        None,  # PATCH
+        {"analyst1": {"attributes": {"roles": "[]"}, "backend_roles": ["br1"]}},
+        None,  # PUT
     ]
     svc.update_internal_user_password("analyst1", "newpass")
-    patch_call = mock_client.transport.perform_request.call_args
-    assert patch_call[0] == (
-        "PATCH",
+    put_call = mock_client.transport.perform_request.call_args
+    assert put_call[0] == (
+        "PUT",
         "/_plugins/_security/api/internalusers/analyst1",
     )
-    assert patch_call[1]["body"] == [
-        {"op": "replace", "path": "/password", "value": "newpass"}
-    ]
+    assert put_call[1]["body"] == {
+        "password": "newpass",
+        "backend_roles": ["br1"],
+        "attributes": {"roles": "[]"},
+    }
 
 
 def test_add_user_to_role_mapping_creates_new():

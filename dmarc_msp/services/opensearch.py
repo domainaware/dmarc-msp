@@ -204,24 +204,41 @@ class OpenSearchService:
         )
 
     def update_internal_user_password(self, username: str, password: str) -> None:
-        """Update an internal user's password."""
-        self._check_user_exists(username)
+        """Update an internal user's password.
+
+        Uses PUT (create-or-replace) instead of PATCH because opensearch-py
+        does not reliably pass JSON Patch array bodies through perform_request.
+        The existing user is read first to preserve backend_roles and attributes.
+        """
+        user = self._check_user_exists(username)
+        body = {
+            "password": password,
+            "backend_roles": user.get("backend_roles", []),
+            "attributes": user.get("attributes", {}),
+        }
         self.client.transport.perform_request(
-            "PATCH",
+            "PUT",
             f"/_plugins/_security/api/internalusers/{username}",
-            body=[{"op": "replace", "path": "/password", "value": password}],
+            body=body,
         )
         logger.info("Reset password for internal user: %s", username)
 
     def update_internal_user_attributes(
         self, username: str, attributes: dict[str, str]
     ) -> None:
-        """Update an internal user's attributes."""
-        self._check_user_exists(username)
+        """Update an internal user's attributes.
+
+        Uses PUT for the same reason as update_internal_user_password.
+        """
+        user = self._check_user_exists(username)
+        body = {
+            "backend_roles": user.get("backend_roles", []),
+            "attributes": attributes,
+        }
         self.client.transport.perform_request(
-            "PATCH",
+            "PUT",
             f"/_plugins/_security/api/internalusers/{username}",
-            body=[{"op": "replace", "path": "/attributes", "value": attributes}],
+            body=body,
         )
 
     # ── Role mapping helpers ──────────────────────────────────────────
