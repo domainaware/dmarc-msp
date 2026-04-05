@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.8 2026-04-05
+
+### Changed
+
+- Removed redundant cluster permissions (`cluster:admin/opensearch/ql/datasources/read`, `cluster_composite_ops_ro`) from analyst and client roles.
+- Added `uiSettings.overrides.defaultRoute: /app/dashboards` to `opensearch_dashboards.yml` and an nginx redirect from `/app/home` to `/app/dashboards` to prevent users from landing on pages they cannot access.
+- Modernized nginx TLS configuration.
+- nginx DNS resolver is now configurable via the `DNS_RESOLVER` environment variable (defaults to `127.0.0.11`, Docker's embedded DNS).
+
 ## 0.2.7 2026-04-03
 
 ### Fixed
