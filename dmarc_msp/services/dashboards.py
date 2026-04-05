@@ -41,28 +41,11 @@ class DashboardService:
 
         rewritten = self._rewrite_template(index_prefix)
         self._import_saved_objects(tenant_name, rewritten)
-        self.set_default_route(tenant_name)
         if self.dark_mode:
             self.set_dark_mode(tenant_name, enabled=True)
         logger.info(
             "Imported dashboards for tenant=%s prefix=%s", tenant_name, index_prefix
         )
-
-    def set_default_route(self, tenant_name: str) -> None:
-        """Set the defaultRoute to /app/dashboards in a tenant's advanced settings."""
-        url = f"{self.dashboards_url}/api/opensearch-dashboards/settings"
-        headers = {
-            "osd-xsrf": "true",
-            "securitytenant": tenant_name,
-        }
-        with httpx.Client(verify=False, auth=self.auth, timeout=30) as client:
-            response = client.post(
-                url,
-                headers=headers,
-                json={"changes": {"defaultRoute": "/app/dashboards"}},
-            )
-            response.raise_for_status()
-        logger.info("Set defaultRoute to /app/dashboards for tenant=%s", tenant_name)
 
     def set_dark_mode(self, tenant_name: str, enabled: bool = True) -> None:
         """Set dark mode in a tenant's advanced settings."""
