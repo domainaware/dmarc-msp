@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.9 2026-04-05
+
+### Fixed
+
+- Fixed colors in the Message disposition over time visualization.
+
 ## 0.2.8 2026-04-05
 
 ### Changed
