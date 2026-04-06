@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.10 2024-04-05
+
+### Changed
+
+- Change OpenSearch default `applicationTitle` for this project to `DMARC analytics`
+
 ## 0.2.9 2026-04-05
 
 ### Fixed

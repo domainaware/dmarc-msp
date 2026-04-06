@@ -26,3 +26,5 @@ uiSettings.overrides.defaultRoute: /app/dashboards
 
 # Add custom settings below
 
+opensearchDashboards.branding:
+  applicationTitle: "DMARC analytics"

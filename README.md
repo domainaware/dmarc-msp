@@ -301,8 +301,7 @@ opensearchDashboards.branding:
     defaultUrl: "https://<dashboards-hostname>/ui/branding/loading-logo.svg"
     darkModeUrl: "https://<dashboards-hostname>/ui/branding/loading-logo-dark.svg"
   faviconUrl: "https://<dashboards-hostname>/ui/branding/favicon.svg"
-  applicationTitle: "DMARC Dashboards"
-  useExpandedHeader: false
+  applicationTitle: "DMARC analytics"
 ```
 
 `defaultUrl` must be set before `darkModeUrl` will take effect. Omit `darkModeUrl` to use the default image for both themes.
