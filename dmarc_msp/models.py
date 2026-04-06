@@ -67,6 +67,8 @@ class OnboardingResult(BaseModel):
 class OffboardingResult(BaseModel):
     client_name: str
     domains_removed: int = 0
+    dns_failures: list[tuple[str, str]] = Field(default_factory=list)
+    """(domain, error) pairs for DNS deletions that failed."""
 
 
 class DomainRemovalResult(BaseModel):

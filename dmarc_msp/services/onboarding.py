@@ -82,6 +82,8 @@ class OnboardingService:
                 f"under client '{existing_client.name}'"
             )
 
+        dns_created = False
+
         try:
             # Ensure client exists
             try:
@@ -104,6 +106,7 @@ class OnboardingService:
             # Create DMARC authorization DNS record
             auth_result = self.dns.create_authorization_record(domain)
             dns_record = auth_result.record
+            dns_created = not auth_result.already_existed
 
             # Store domain in DB
             if existing and existing.status == DomainStatus.OFFBOARDED.value:
@@ -167,6 +170,18 @@ class OnboardingService:
             self.db.commit()
         except Exception:
             self.db.rollback()
+            # Clean up the DNS record we created so it doesn't become
+            # a stale orphan.  Best-effort — if this also fails, log it
+            # but don't mask the original exception.
+            if dns_created:
+                try:
+                    self.dns.delete_authorization_record(domain)
+                except Exception:
+                    logger.error(
+                        "Failed to clean up DNS record for '%s' after "
+                        "rollback — manual cleanup may be needed",
+                        domain,
+                    )
             raise
 
         return OnboardingResult(

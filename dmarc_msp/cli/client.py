@@ -237,6 +237,16 @@ def offboard(
             f"Offboarded [bold]{result.client_name}[/bold] "
             f"({result.domains_removed} domains removed)"
         )
+        if result.dns_failures:
+            console.print(
+                f"[yellow]Warning:[/yellow] {len(result.dns_failures)} DNS "
+                "record(s) could not be deleted:"
+            )
+            for domain, error in result.dns_failures:
+                console.print(f"  - {domain}: {error}")
+            console.print(
+                "[yellow]These authorization records may need manual cleanup.[/yellow]"
+            )
     except Exception as e:
         console.print(f"[red]Error:[/red] {e}")
         raise typer.Exit(1)

@@ -335,6 +335,9 @@ def test_add_domain_rolls_back_on_dns_failure(db_session: Session):
     domains = db_session.query(DomainRow).all()
     assert len(domains) == 0
 
+    # DNS record was never created, so no cleanup needed
+    svc.dns.delete_authorization_record.assert_not_called()
+
 
 def test_add_domain_rolls_back_client_on_dns_failure(db_session: Session):
     svc, client_svc = _make_service(db_session)
@@ -363,6 +366,9 @@ def test_add_domain_rolls_back_on_parsedmarc_failure(db_session: Session):
     domains = db_session.query(DomainRow).all()
     assert len(domains) == 0
 
+    # DNS record should be cleaned up on rollback
+    svc.dns.delete_authorization_record.assert_called_with("acme.com")
+
 
 def test_add_domain_rolls_back_on_opensearch_failure(db_session: Session):
     svc, client_svc = _make_service(db_session)
@@ -379,6 +385,9 @@ def test_add_domain_rolls_back_on_opensearch_failure(db_session: Session):
     domains = db_session.query(DomainRow).all()
     assert len(domains) == 0
 
+    # DNS record should be cleaned up on rollback
+    svc.dns.delete_authorization_record.assert_called_with("acme.com")
+
 
 def test_add_domain_rolls_back_on_dashboard_import_failure(db_session: Session):
     svc, client_svc = _make_service(db_session)
@@ -392,6 +401,50 @@ def test_add_domain_rolls_back_on_dashboard_import_failure(db_session: Session):
 
     domains = db_session.query(DomainRow).all()
     assert len(domains) == 0
+
+    # DNS record should be cleaned up on rollback
+    svc.dns.delete_authorization_record.assert_called_with("acme.com")
+
+
+def test_add_domain_skips_dns_cleanup_if_record_preexisted(db_session: Session):
+    """If the DNS record already existed (e.g. from a previous DMARC solution),
+    don't delete it on rollback — it's not ours to clean up."""
+    svc, client_svc = _make_service(db_session)
+    client_svc.create("Acme Corp")
+    svc.dns.create_authorization_record.return_value = MagicMock(
+        record=MagicMock(record_id="rec_preexisting"),
+        already_existed=True,
+    )
+    svc.opensearch.provision_tenant.side_effect = ConnectionError("unreachable")
+
+    with pytest.raises(ConnectionError):
+        svc.add_domain("Acme Corp", "acme.com")
+
+    svc.dns.delete_authorization_record.assert_not_called()
+
+
+def test_add_domain_rollback_dns_cleanup_failure_is_logged(
+    db_session: Session, caplog
+):
+    """If DNS cleanup during rollback also fails, the original error is
+    still raised and the DNS failure is logged."""
+    import logging
+
+    svc, client_svc = _make_service(db_session)
+    client_svc.create("Acme Corp")
+    svc.opensearch.provision_tenant.side_effect = ConnectionError("unreachable")
+    svc.dns.delete_authorization_record.side_effect = RuntimeError("DNS also down")
+
+    with pytest.raises(ConnectionError, match="unreachable"):
+        with caplog.at_level(logging.ERROR):
+            svc.add_domain("Acme Corp", "acme.com")
+
+    # DNS cleanup was attempted
+    svc.dns.delete_authorization_record.assert_called_with("acme.com")
+
+    # Failure was logged
+    assert "Failed to clean up DNS record" in caplog.text
+    assert "acme.com" in caplog.text
 
 
 def test_remove_domain_rolls_back_on_failure(db_session: Session):

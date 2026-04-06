@@ -57,6 +57,10 @@ class DNSService:
         """Create the DMARC authorization TXT record for a client domain.
 
         If the record already exists, returns it without calling create.
+        If the provider raises during creation (e.g. a duplicate/conflict
+        error from a record that was created between our check and our
+        create, or left over from a previous DMARC solution), we re-check
+        whether the record now exists and treat that as success.
         """
         name = self.authorization_record_name(client_domain)
         try:
@@ -77,10 +81,31 @@ class DNSService:
                 self.zone,
                 DMARC_AUTH_VALUE,
             )
-            record = self.provider.create_txt_record(
-                zone=self.zone, name=name, value=DMARC_AUTH_VALUE
-            )
-            return AuthRecordResult(record=record, already_existed=False)
+            try:
+                record = self.provider.create_txt_record(
+                    zone=self.zone, name=name, value=DMARC_AUTH_VALUE
+                )
+                return AuthRecordResult(record=record, already_existed=False)
+            except Exception:
+                # The create failed — the record may have appeared between
+                # our check and our create (race), or the provider doesn't
+                # handle duplicates gracefully.  Re-check before giving up.
+                logger.debug(
+                    "Create failed for %s.%s, re-checking for existing record",
+                    name,
+                    self.zone,
+                )
+                recheck = self.provider.get_txt_records(zone=self.zone, name=name)
+                for rec in recheck:
+                    if rec.value == DMARC_AUTH_VALUE:
+                        logger.info(
+                            "DMARC auth record exists after failed create "
+                            "(likely race or pre-existing): %s.%s",
+                            name,
+                            self.zone,
+                        )
+                        return AuthRecordResult(record=rec, already_existed=True)
+                raise  # genuinely failed — re-raise the original error
         except Exception as e:
             raise self._wrap_error(e) from e
 

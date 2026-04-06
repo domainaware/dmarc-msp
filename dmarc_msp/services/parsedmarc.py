@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import logging
+import os
+import tempfile
 from pathlib import Path
 
 import yaml
@@ -13,6 +15,10 @@ logger = logging.getLogger(__name__)
 
 
 _MANAGED_HEADER = "# This file is managed by dmarcmsp. Do not edit it manually.\n\n"
+
+
+class ParsedmarcReloadError(Exception):
+    """Raised when sending SIGHUP to parsedmarc fails."""
 
 
 class ParsedmarcService:
@@ -74,9 +80,17 @@ class ParsedmarcService:
         """Return all current mappings."""
         return self._read()
 
-    def reload(self) -> bool:
-        """Send SIGHUP to parsedmarc to reload config."""
-        return self.signaler.send_sighup()
+    def reload(self) -> None:
+        """Send SIGHUP to parsedmarc to reload config.
+
+        Raises ParsedmarcReloadError if the signal fails, so callers
+        can decide whether to roll back or continue.
+        """
+        if not self.signaler.send_sighup():
+            raise ParsedmarcReloadError(
+                "Failed to send SIGHUP to parsedmarc — "
+                "config changes are on disk but parsedmarc has not reloaded"
+            )
 
     def _read(self) -> dict[str, list[str]]:
         if not self.domain_map_file.exists():
@@ -87,6 +101,20 @@ class ParsedmarcService:
 
     def _write(self, mapping: dict[str, list[str]]) -> None:
         sorted_mapping = dict(sorted(mapping.items()))
-        with open(self.domain_map_file, "w") as f:
-            f.write(_MANAGED_HEADER)
-            yaml.dump(sorted_mapping, f, default_flow_style=False, sort_keys=True)
+        # Atomic write: write to a temp file in the same directory, then
+        # rename.  os.rename() is atomic on POSIX, so parsedmarc will
+        # never read a half-written file.
+        parent = self.domain_map_file.parent
+        fd, tmp_path = tempfile.mkstemp(dir=parent, suffix=".tmp")
+        try:
+            with os.fdopen(fd, "w") as f:
+                f.write(_MANAGED_HEADER)
+                yaml.dump(sorted_mapping, f, default_flow_style=False, sort_keys=True)
+            os.rename(tmp_path, self.domain_map_file)
+        except BaseException:
+            # Clean up the temp file if anything goes wrong
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
+            raise

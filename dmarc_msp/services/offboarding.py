@@ -12,7 +12,7 @@ from dmarc_msp.models import DomainStatus, OffboardingResult
 from dmarc_msp.services.clients import ClientService
 from dmarc_msp.services.dns import DNSService
 from dmarc_msp.services.opensearch import OpenSearchService
-from dmarc_msp.services.parsedmarc import ParsedmarcService
+from dmarc_msp.services.parsedmarc import ParsedmarcReloadError, ParsedmarcService
 from dmarc_msp.services.retention import RetentionService
 
 logger = logging.getLogger(__name__)
@@ -49,19 +49,42 @@ class OffboardingService:
         active_domains = client.active_domains
         domains_removed = len(active_domains)
 
+        dns_failures: list[tuple[str, str]] = []
+
         try:
-            # Remove DNS records and YAML mappings for all active domains
+            # Best-effort DNS cleanup — continue on individual failures so
+            # that one provider error doesn't leave the DB/DNS state split.
             for domain_row in active_domains:
                 if purge_dns:
-                    self.dns.delete_authorization_record(domain_row.domain_name)
+                    try:
+                        self.dns.delete_authorization_record(
+                            domain_row.domain_name
+                        )
+                    except Exception as e:
+                        logger.error(
+                            "DNS delete failed for %s: %s",
+                            domain_row.domain_name,
+                            e,
+                        )
+                        dns_failures.append((domain_row.domain_name, str(e)))
+
                 self.parsedmarc.remove_domain_mapping(
                     client.index_prefix, domain_row.domain_name
                 )
                 domain_row.status = DomainStatus.OFFBOARDED.value
                 domain_row.offboarded_at = datetime.now(UTC)
 
-            # Reload parsedmarc
-            self.parsedmarc.reload()
+            # Reload parsedmarc — best-effort during offboarding.
+            # The YAML is already updated, so parsedmarc will pick up the
+            # changes on its next restart even if the signal fails now.
+            try:
+                self.parsedmarc.reload()
+            except ParsedmarcReloadError:
+                logger.warning(
+                    "parsedmarc reload failed during offboarding of '%s' — "
+                    "YAML is updated but parsedmarc has not reloaded",
+                    client.name,
+                )
 
             # Deprovision OpenSearch tenant, role, and role mapping
             self.opensearch.deprovision_tenant(client.tenant_name)
@@ -83,6 +106,7 @@ class OffboardingService:
                         "domains_removed": domains_removed,
                         "purge_dns": purge_dns,
                         "purge_indices": purge_indices,
+                        "dns_failures": dns_failures,
                     },
                     success=True,
                 )
@@ -92,7 +116,16 @@ class OffboardingService:
             self.db.rollback()
             raise
 
+        if dns_failures:
+            logger.warning(
+                "Client '%s' offboarded with %d DNS cleanup failure(s): %s",
+                client.name,
+                len(dns_failures),
+                ", ".join(d for d, _ in dns_failures),
+            )
+
         return OffboardingResult(
             client_name=client.name,
             domains_removed=domains_removed,
+            dns_failures=dns_failures,
         )

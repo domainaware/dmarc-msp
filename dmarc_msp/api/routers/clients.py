@@ -98,9 +98,14 @@ def offboard_client(name: str, body: ClientOffboard, settings: SettingsDep, db: 
         result = svc.offboard_client(
             name, purge_dns=True, purge_indices=body.purge_indices
         )
-        return {
+        response = {
             "message": f"Offboarded {result.client_name}",
             "domains_removed": result.domains_removed,
         }
+        if result.dns_failures:
+            response["dns_failures"] = [
+                {"domain": d, "error": e} for d, e in result.dns_failures
+            ]
+        return response
     except ClientNotFoundError as e:
         raise HTTPException(404, str(e))

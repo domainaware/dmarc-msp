@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.3.0 2026-04-06
+
+### Fixed
+
+- Client offboarding no longer aborts on a single DNS deletion failure. DNS cleanup is now best-effort per domain — failures are collected, logged, recorded in the audit log, and surfaced via CLI warnings and the API response. The DB transaction always commits so that DNS and DB state stay consistent.
+- `add_domain` now cleans up the DNS authorization record it created when a later step fails (parsedmarc write, reload, OpenSearch provisioning, or dashboard import). Previously, a rollback would leave an orphaned DNS record in the provider.
+- Pre-existing authorization records (e.g. left by a previous DMARC solution) no longer cause onboarding failures. `create_authorization_record` now re-checks after a provider conflict and treats a confirmed existing record as success.
+- `ParsedmarcService.reload()` now raises `ParsedmarcReloadError` on failure instead of returning `False`. During onboarding, this triggers a full rollback (including DNS cleanup) so domains are not committed if parsedmarc cannot reload. During offboarding, the error is caught and logged as a warning — the YAML is already updated and parsedmarc will pick up changes on next restart.
+- The parsedmarc YAML domain map is now written atomically (temp file + `os.rename`). A crash mid-write can no longer leave a truncated file that breaks parsedmarc.
+
+### Added
+
+- `OffboardingResult.dns_failures` field reports which domains had DNS cleanup failures during offboarding.
+- `ParsedmarcReloadError` exception for explicit reload failure handling.
+- Stress tests for bulk onboarding/offboarding at MSP scale (28 tests covering 20+ domain batches, multi-client churn, interleaved operations, pre-existing DNS records, and DNS/DB consistency).
+
 ## 0.2.10 2026-04-05
 
 ### Changed
