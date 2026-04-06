@@ -15,6 +15,8 @@ One email address receives all DMARC reports. parsedmarc routes them to per-clie
 - **Plugin-based DNS** — DNS providers implement `DNSProvider` (see `dns_providers/base.py`).
 - **Idempotent operations** — onboarding the same domain twice is safe.
 - **Normalize early** — all domain names and index prefixes are lowercased at the point of entry.
+- **DB before external state** — `add_domain` commits the domain reservation to the database before creating DNS records or modifying the parsedmarc YAML. This prevents concurrent operations (e.g., `cleanup-dns`) from seeing orphaned external state.
+- **YAML rollback on failure** — every orchestrator that mutates the parsedmarc YAML (`add_domain`, `remove_domain`, `move_domain`, `offboard_client`) restores the YAML to its prior state if the DB commit or a later step fails.
 
 ## Key Directories
 
@@ -33,7 +35,7 @@ dmarc_msp/
 │   ├── onboarding.py   # Orchestrator: add/remove/move domains
 │   └── offboarding.py  # Orchestrator: full client teardown
 ├── dns_providers/      # Pluggable DNS backends
-│   ├── base.py         # Abstract DNSProvider + DNSRecord
+│   ├── base.py         # Abstract DNSProvider + DNSRecord (get/create/delete/list)
 │   ├── cloudflare.py   # Cloudflare (default, included in base deps)
 │   ├── route53.py      # AWS Route 53 (optional extra)
 │   ├── gcp.py          # Google Cloud DNS (optional extra)
@@ -43,7 +45,7 @@ dmarc_msp/
 ├── cli/                # Typer CLI (dmarcmsp)
 │   ├── helpers.py      # Dependency wiring for CLI commands
 │   ├── client.py       # client create/list/show/update/rename/offboard
-│   ├── domain.py       # domain add/remove/move/verify/list/bulk-*
+│   ├── domain.py       # domain add/remove/move/verify/list/cleanup-dns/bulk-*
 │   ├── tenant.py       # tenant provision/deprovision
 │   ├── dashboard.py    # dashboard import / import-all
 │   ├── retention.py    # retention cleanup-emails/ensure-default-policy
@@ -127,6 +129,37 @@ A domain can only belong to one client at a time. Offboarded domains can be re-a
 - **nginx** — reverse proxy in front of Dashboards. Dashboards serves plain HTTP internally on port 5601; nginx terminates TLS.
 - **Email cleanup** — handled by the dmarc-msp container's background loop (runs daily), configured via `retention.email_days` in the YAML config. No separate cron container.
 
+## Concurrency Model
+
+The system is designed for safe concurrent operation across CLI invocations, API requests, and background tasks.
+
+### Parsedmarc YAML file lock
+
+All mutations to the domain map YAML (`add_domain_mapping`, `remove_domain_mapping`, `move_domain_mapping`) are serialized with an exclusive file lock (`flock`) at `<domain_map_file>.lock`. This prevents concurrent domain operations from racing on the read-modify-write cycle. The lock is advisory (POSIX `flock`), blocking, and automatically released when the file descriptor closes (including process crash).
+
+### Domain reservation (DB-first commit)
+
+`add_domain` commits the domain row to SQLite (status `pending_dns`) **before** creating the DNS record. This ensures the domain is visible to other sessions (e.g., a concurrent `cleanup-dns`) before its external state exists. If a later step fails, the rollback handler:
+
+- Deletes the domain row (new domains) or restores `offboarded` status (re-added domains)
+- Deletes the DNS record if one was created
+- Removes the parsedmarc YAML mapping if one was written
+- Deletes an auto-created client if `create_client=True` was used
+
+### YAML rollback
+
+Every orchestrator method that mutates the parsedmarc YAML tracks whether the mutation succeeded and reverses it in the exception handler if the DB commit fails:
+
+- `add_domain` → calls `remove_domain_mapping` on rollback
+- `remove_domain` → calls `add_domain_mapping` on rollback
+- `move_domain` → calls `move_domain_mapping` (reversed direction) on rollback
+- `offboard_client` → calls `add_domain_mapping` for each removed domain on rollback
+
+### What is NOT protected
+
+- **OpenSearch API calls** (tenant provisioning, role mapping, user management) are not transactional. OpenSearch has no transaction support. These operations are idempotent (PUT-based) so concurrent calls produce correct results, but multi-step operations (e.g., create user + add to role mapping) can leave partial state on failure.
+- **SQLite row-level locking** is not used. Duplicate protection relies on UNIQUE constraints, which produce clean `IntegrityError` exceptions rather than silent corruption.
+
 ## Running Tests
 
 ```bash
@@ -143,7 +176,7 @@ When creating ASCII/Unicode box-drawing diagrams, never hand-draw them. Instead,
 
 ### Adding a new DNS provider
 
-1. Create `dmarc_msp/dns_providers/<provider>.py` implementing `DNSProvider`.
+1. Create `dmarc_msp/dns_providers/<provider>.py` implementing `DNSProvider` (must implement `create_txt_record`, `delete_txt_record`, `get_txt_records`, and `list_txt_records`).
 2. Add the provider option to `cli/helpers.py:get_dns_provider()`.
 3. Add optional dependency to `pyproject.toml` under `[project.optional-dependencies]`.
 4. Add env vars to `docker-compose.yml` (commented out) and `.env.example`.

@@ -188,6 +188,52 @@ dmarcmsp domain list
 dmarcmsp domain list --client "Acme Corp"
 ```
 
+### User management
+
+Each client can have one or more login accounts for OpenSearch Dashboards. Client users see only their own tenant's data.
+
+```bash
+# Create a client user (prints the generated password)
+dmarcmsp client user create "Acme Corp" alice
+
+# Reset password (also re-enables a disabled account)
+dmarcmsp client user reset-password alice
+
+# Disable a user (randomizes password and removes role mappings)
+dmarcmsp client user disable alice
+
+# Delete a user
+dmarcmsp client user delete alice
+
+# List all client users
+dmarcmsp client user list
+```
+
+Analysts have read-only access across all client tenants:
+
+```bash
+# Create an analyst account
+dmarcmsp analyst create alice
+
+# Reset password / disable / delete / list
+dmarcmsp analyst reset-password alice
+dmarcmsp analyst disable alice
+dmarcmsp analyst delete alice
+dmarcmsp analyst list
+```
+
+### DNS cleanup
+
+Remove stale DMARC authorization DNS records — records that exist in the DNS zone but have no matching active domain in the database. Useful after failed offboardings, manual DNS changes, or database restores.
+
+```bash
+# Preview what would be deleted (default — dry run)
+dmarcmsp domain cleanup-dns
+
+# Actually delete stale records
+dmarcmsp domain cleanup-dns --no-dry-run
+```
+
 ### Bulk operations
 
 Create a text file with one domain per line (blank lines and `#` comments are skipped):
@@ -213,6 +259,9 @@ dmarcmsp dashboard import-all
 dmarcmsp tenant provision "Acme Corp"
 dmarcmsp tenant deprovision "Acme Corp"
 
+# Migrate tenant names to use 'client_' prefix (one-time, for wildcard analyst access)
+dmarcmsp tenant migrate-prefix
+
 # Re-import dashboards for a single client
 dmarcmsp dashboard import "Acme Corp"
 
@@ -226,6 +275,9 @@ dmarcmsp parsedmarc reload
 # Retention management
 dmarcmsp retention cleanup-emails             # delete old emails per config
 dmarcmsp retention ensure-default-policy       # create/update default ISM policy
+
+# Validate configuration and connectivity
+dmarcmsp config-validate
 ```
 
 ### Management API
@@ -667,9 +719,9 @@ docker exec parsedmarc-postfix cat /var/mail/dmarc/Maildir/.Archive.Aggregate/cu
 
 Yes. You can modify the docker-compose file to do that. Just remove the `postfix` service, then configure the parsedmarc service [environment variables](https://domainaware.github.io/parsedmarc/usage.html#environment-variable-configuration) to use parsedmarc's built-in support for Microsoft Graph or the Google APIs.
 
-### Handling DMARC authorization  DNS records are a pain. Can this project handle them at scale?
+### Handling DMARC authorization DNS records is a pain. Can this project handle them at scale?
 
-Yes. over 40 tests a DNS-related, covering items such as bulk onboarding/offboarding at scale (DNS cleanup, consistency, interleaved operations, pre-existing records, race conditions). Keep in mind though that this is still a beta project that was created with the help of AI and my own testing. Do your own testing before deploying this in production.
+Yes. Over 40 tests are DNS-related, covering bulk onboarding/offboarding at scale, DNS cleanup, consistency, interleaved operations, pre-existing records, and race conditions. A `cleanup-dns` command reconciles the DNS zone against the database to remove orphaned records. Keep in mind that this is still a beta project created with the help of AI and my own testing. Do your own testing before deploying in production.
 
 ## License
 
