@@ -153,7 +153,11 @@ class TestBulkRemoveAtScale:
         client_svc.create("BigClient")
         domains = _add_domains(onboard, "BigClient", 30)
 
-        fail_set = {"domain-0.example.com", "domain-14.example.com", "domain-29.example.com"}
+        fail_set = {
+            "domain-0.example.com",
+            "domain-14.example.com",
+            "domain-29.example.com",
+        }
 
         def selective_failure(domain_name):
             if domain_name in fail_set:
@@ -224,7 +228,7 @@ class TestOffboardClientAtScale:
         deletion is reported in the result."""
         onboard, offboard, client_svc, dns, *_ = _make_services(db_session)
         client_svc.create("BigClient")
-        domains = _add_domains(onboard, "BigClient", 25)
+        _add_domains(onboard, "BigClient", 25)
 
         def fail_on_15th(domain_name):
             if domain_name == "domain-14.example.com":
@@ -610,7 +614,11 @@ class TestBulkOnboardAtScale:
         onboard, _, client_svc, dns, *_ = _make_services(db_session)
         client_svc.create("BigClient")
 
-        fail_set = {"domain-0.example.com", "domain-14.example.com", "domain-29.example.com"}
+        fail_set = {
+            "domain-0.example.com",
+            "domain-14.example.com",
+            "domain-29.example.com",
+        }
 
         def selective_failure(domain_name):
             if domain_name in fail_set:
@@ -636,7 +644,7 @@ class TestBulkOnboardAtScale:
     def test_bulk_add_provisions_tenant_only_once(
         self, db_session: Session, tmp_path
     ):
-        """OpenSearch tenant is provisioned on first domain, not repeated for 24 more."""
+        """OpenSearch tenant provisioned on first domain, not for 24 more."""
         onboard, _, client_svc, dns, _, opensearch = _make_services(db_session)
         client_svc.create("BigClient")
 
@@ -713,7 +721,6 @@ class TestDNSCreateResilience:
         """Provider raises on create, but re-check finds the record — success."""
         from dmarc_msp.dns_providers.base import DNSRecord
         from dmarc_msp.services.dns import DMARC_AUTH_VALUE, DNSService
-
         from tests.test_dns_providers.test_base import FakeDNSProvider
 
         provider = FakeDNSProvider()
@@ -729,8 +736,6 @@ class TestDNSCreateResilience:
         # create_txt_record raises, then get_txt_records finds the record
         # on re-check (another process created it in between).
         call_count = {"get": 0}
-        original_get = provider.get_txt_records
-        original_create = provider.create_txt_record
 
         def get_with_race(zone, name):
             call_count["get"] += 1
@@ -754,7 +759,6 @@ class TestDNSCreateResilience:
         """Provider raises on create and re-check confirms record doesn't
         exist — genuine failure, re-raises."""
         from dmarc_msp.services.dns import DNSProviderError, DNSService
-
         from tests.test_dns_providers.test_base import FakeDNSProvider
 
         provider = FakeDNSProvider()
@@ -780,7 +784,6 @@ class TestDNSCreateResilience:
         """Record already exists from a previous DMARC solution — found on
         the initial get_txt_records check, create is never called."""
         from dmarc_msp.services.dns import DMARC_AUTH_VALUE, DNSService
-
         from tests.test_dns_providers.test_base import FakeDNSProvider
 
         provider = FakeDNSProvider()
@@ -833,7 +836,7 @@ class TestInterleavedOnboardOffboard:
 
         client_svc.create("Departing")
         client_svc.create("Arriving")
-        departing_domains = _add_domains(onboard, "Departing", 10)
+        _add_domains(onboard, "Departing", 10)
 
         dns.reset_mock()
 

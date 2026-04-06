@@ -108,7 +108,6 @@ def test_atomic_write_no_temp_files_left(tmp_path):
 
 def test_atomic_write_preserves_content_on_error(tmp_path):
     """If the write fails, the original file should be untouched."""
-    import os
     from unittest.mock import patch
 
     svc = _make_service(tmp_path)
