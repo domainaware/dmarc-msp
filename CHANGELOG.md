@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.4.0 2026-04-06
+
+### Added
+
+- `dmarcmsp domain cleanup-dns` command and `POST /api/v1/domains/cleanup-dns` endpoint to remove stale DMARC authorization DNS records from the zone. Compares all authorization TXT records against the database and deletes any whose domain is not actively monitored. Defaults to dry-run mode; pass `--no-dry-run` to actually delete records.
+- `list_txt_records(zone)` method on the `DNSProvider` interface, implemented for all four providers (Cloudflare, Route 53, GCP, Azure).
+
+### Fixed
+
+- `add_domain` now commits the domain row to the database (as `pending_dns`) before creating the DNS record. This prevents a concurrent `cleanup-dns` from deleting a record that is mid-onboarding. On failure, the reservation is fully reverted.
+- `add_domain` now cleans up the parsedmarc YAML mapping on rollback. Previously, a failure after the YAML write but before the final DB commit would leave a stale mapping in the YAML file.
+- `remove_domain` now restores the parsedmarc YAML mapping if the DB commit fails after the mapping was removed.
+- `move_domain` now reverses the parsedmarc YAML move if the DB commit or OpenSearch provisioning fails afterward.
+- `offboard_client` now restores all parsedmarc YAML mappings if the DB commit fails after domain mappings were removed.
+- Parsedmarc YAML read-modify-write operations are now serialized with a file lock. Previously, concurrent domain operations (add, remove, move) could race on the YAML file, silently losing mappings.
+- Cloudflare provider now iterates paginated responses directly instead of accessing `.result` (first page only). Previously, `get_txt_records`, `delete_txt_record`, and zone-wide listing could silently truncate results in large zones.
+- Route 53 `delete_txt_record` now sends the complete record set in the DELETE call. Previously, it sent per-value DELETEs that would fail when a record set contained multiple TXT values.
+
 ## 0.3.0 2026-04-06
 
 ### Fixed

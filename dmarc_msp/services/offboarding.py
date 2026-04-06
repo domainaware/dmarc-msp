@@ -50,6 +50,7 @@ class OffboardingService:
         domains_removed = len(active_domains)
 
         dns_failures: list[tuple[str, str]] = []
+        yaml_removed: list[str] = []
 
         try:
             # Best-effort DNS cleanup — continue on individual failures so
@@ -71,6 +72,7 @@ class OffboardingService:
                 self.parsedmarc.remove_domain_mapping(
                     client.index_prefix, domain_row.domain_name
                 )
+                yaml_removed.append(domain_row.domain_name)
                 domain_row.status = DomainStatus.OFFBOARDED.value
                 domain_row.offboarded_at = datetime.now(UTC)
 
@@ -114,6 +116,19 @@ class OffboardingService:
             self.db.commit()
         except Exception:
             self.db.rollback()
+            # Restore YAML mappings that were already removed so the
+            # domain map stays consistent with the rolled-back DB state.
+            for domain_name in yaml_removed:
+                try:
+                    self.parsedmarc.add_domain_mapping(
+                        client.index_prefix, domain_name
+                    )
+                except Exception:
+                    logger.error(
+                        "Failed to restore YAML mapping for '%s' after "
+                        "rollback — manual cleanup may be needed",
+                        domain_name,
+                    )
             raise
 
         if dns_failures:

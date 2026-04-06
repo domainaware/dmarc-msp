@@ -39,6 +39,13 @@ class FakeDNSProvider(DNSProvider):
         key = f"{name}.{zone}"
         return self.records.get(key, [])
 
+    def list_txt_records(self, zone):
+        results = []
+        for key, recs in self.records.items():
+            if key.endswith(f".{zone}"):
+                results.extend(recs)
+        return results
+
 
 def test_create_and_get():
     provider = FakeDNSProvider()
@@ -98,6 +105,23 @@ def test_parse_txt_value_multiple_quoted_segments():
 
 def test_parse_txt_value_strips_whitespace():
     assert parse_txt_value('  "v=DMARC1"  ') == "v=DMARC1"
+
+
+def test_list_txt_records():
+    provider = FakeDNSProvider()
+    provider.create_txt_record("example.com", "a", "v=DMARC1")
+    provider.create_txt_record("example.com", "b", "v=spf1 -all")
+    provider.create_txt_record("other.com", "c", "v=DMARC1")
+
+    records = provider.list_txt_records("example.com")
+    assert len(records) == 2
+    fqdns = {r.fqdn for r in records}
+    assert fqdns == {"a.example.com", "b.example.com"}
+
+
+def test_list_txt_records_empty():
+    provider = FakeDNSProvider()
+    assert provider.list_txt_records("empty.com") == []
 
 
 def test_parse_txt_value_list_of_segments():

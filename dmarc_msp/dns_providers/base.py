@@ -64,6 +64,11 @@ class DNSProvider(ABC):
         """Retrieve all TXT records for a given name."""
         ...
 
+    @abstractmethod
+    def list_txt_records(self, zone: str) -> list[DNSRecord]:
+        """List all TXT records in the zone."""
+        ...
+
     def verify_record_exists(self, zone: str, name: str, expected_value: str) -> bool:
         """Check whether the expected record exists."""
         records = self.get_txt_records(zone, name)

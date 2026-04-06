@@ -39,6 +39,10 @@ class DomainMove(BaseModel):
     to_client: str
 
 
+class CleanupDNSRequest(BaseModel):
+    dry_run: bool = True
+
+
 class ClientOffboard(BaseModel):
     purge_indices: bool = False
 

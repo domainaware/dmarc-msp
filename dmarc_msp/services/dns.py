@@ -5,8 +5,12 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 
+from sqlalchemy.orm import Session
+
 from dmarc_msp.config import Settings
+from dmarc_msp.db import DomainRow
 from dmarc_msp.dns_providers.base import DNSProvider, DNSRecord
+from dmarc_msp.models import CleanupDNSResult, DomainStatus
 
 logger = logging.getLogger(__name__)
 
@@ -129,3 +133,74 @@ class DNSService:
             )
         except Exception as e:
             raise self._wrap_error(e) from e
+
+    def _extract_client_domain(self, fqdn: str) -> str | None:
+        """Extract the client domain from a DMARC auth record FQDN.
+
+        Returns None if the FQDN doesn't match the expected pattern.
+        """
+        msp_part = self.msp_domain
+        if msp_part.endswith(f".{self.zone}"):
+            msp_part = msp_part[: -len(f".{self.zone}")]
+        suffix = f"._report._dmarc.{msp_part}.{self.zone}"
+        fqdn_clean = fqdn.rstrip(".")
+        if fqdn_clean.lower().endswith(suffix.lower()):
+            return fqdn_clean[: -len(suffix)]
+        return None
+
+    def cleanup_stale_records(
+        self,
+        db: Session,
+        dry_run: bool = False,
+    ) -> CleanupDNSResult:
+        """Remove DMARC authorization records with no matching active domain.
+
+        A record is considered stale if the extracted client domain does not
+        appear in the database with a non-offboarded status (i.e. pending_dns,
+        active, or offboarding).
+        """
+        try:
+            all_txt = self.provider.list_txt_records(self.zone)
+        except Exception as e:
+            raise self._wrap_error(e) from e
+
+        # Build set of domains that should keep their auth records.
+        active_domains = {
+            row.domain_name.lower()
+            for row in db.query(DomainRow.domain_name)
+            .filter(DomainRow.status != DomainStatus.OFFBOARDED)
+            .all()
+        }
+
+        result = CleanupDNSResult(dry_run=dry_run)
+        for rec in all_txt:
+            if rec.value != DMARC_AUTH_VALUE:
+                continue
+            client_domain = self._extract_client_domain(rec.fqdn)
+            if client_domain is None:
+                continue
+
+            if client_domain.lower() in active_domains:
+                result.active_skipped += 1
+                continue
+
+            # Stale record found.
+            if dry_run:
+                result.stale.append(client_domain)
+            else:
+                name = self.authorization_record_name(client_domain)
+                try:
+                    self.provider.delete_txt_record(
+                        zone=self.zone, name=name, value=DMARC_AUTH_VALUE
+                    )
+                    result.stale.append(client_domain)
+                    logger.info("Deleted stale auth record for %s", client_domain)
+                except Exception as e:
+                    result.failed.append((client_domain, str(e)))
+                    logger.warning(
+                        "Failed to delete stale auth record for %s: %s",
+                        client_domain,
+                        e,
+                    )
+
+        return result

@@ -106,3 +106,19 @@ class GCPDNSProvider(DNSProvider):
                     )
                 )
         return results
+
+    def list_txt_records(self, zone: str) -> list[DNSRecord]:
+        managed_zone = self._get_zone(zone)
+        results: list[DNSRecord] = []
+        for rrset in managed_zone.list_resource_record_sets():
+            if rrset.record_type != "TXT":
+                continue
+            for rdata in rrset.rrdatas:
+                results.append(
+                    DNSRecord(
+                        fqdn=rrset.name,
+                        value=parse_txt_value(rdata),
+                        ttl=rrset.ttl,
+                    )
+                )
+        return results

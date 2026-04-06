@@ -5,9 +5,9 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException
 
 from dmarc_msp.api.dependencies import DbDep, SettingsDep
-from dmarc_msp.api.schemas import DomainAdd, DomainMove, DomainRemove
-from dmarc_msp.cli.helpers import get_onboarding_service
-from dmarc_msp.models import DomainInfo, MoveResult, OnboardingResult
+from dmarc_msp.api.schemas import CleanupDNSRequest, DomainAdd, DomainMove, DomainRemove
+from dmarc_msp.cli.helpers import get_dns_provider, get_onboarding_service
+from dmarc_msp.models import CleanupDNSResult, DomainInfo, MoveResult, OnboardingResult
 from dmarc_msp.services.clients import ClientNotFoundError
 from dmarc_msp.services.onboarding import DomainAlreadyExistsError, DomainNotFoundError
 
@@ -50,6 +50,14 @@ def move_domain(body: DomainMove, settings: SettingsDep, db: DbDep):
         raise HTTPException(409, str(e))
     except ClientNotFoundError as e:
         raise HTTPException(404, str(e))
+
+
+@router.post("/cleanup-dns", response_model=CleanupDNSResult)
+def cleanup_dns(body: CleanupDNSRequest, settings: SettingsDep, db: DbDep):
+    from dmarc_msp.services.dns import DNSService
+
+    dns_svc = DNSService(get_dns_provider(settings), settings)
+    return dns_svc.cleanup_stale_records(db, dry_run=body.dry_run)
 
 
 @router.get("", response_model=list[DomainInfo])

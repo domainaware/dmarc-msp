@@ -95,3 +95,21 @@ class AzureDNSProvider(DNSProvider):
                 )
             )
         return results
+
+    def list_txt_records(self, zone: str) -> list[DNSRecord]:
+        results: list[DNSRecord] = []
+        for record_set in self._client.record_sets.list_by_type(
+            self._resource_group, self._zone_name, "TXT"
+        ):
+            for txt_rec in record_set.txt_records or []:
+                val = parse_txt_value(txt_rec.value)
+                results.append(
+                    DNSRecord(
+                        fqdn=f"{record_set.name}.{zone}"
+                        if record_set.name != "@"
+                        else zone,
+                        value=val,
+                        ttl=record_set.ttl or 3600,
+                    )
+                )
+        return results

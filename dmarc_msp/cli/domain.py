@@ -182,6 +182,53 @@ def list_domains(
         db.close()
 
 
+@app.command("cleanup-dns")
+def cleanup_dns(
+    dry_run: bool = typer.Option(
+        True,
+        "--dry-run/--no-dry-run",
+        help="Show what would be deleted without deleting",
+    ),
+    config: str | None = typer.Option(None, "--config", "-c"),
+):
+    """Remove stale DMARC authorization DNS records.
+
+    Lists all authorization TXT records in the DNS zone and deletes any
+    whose domain is not actively monitored.  Defaults to dry-run mode;
+    pass --no-dry-run to actually delete records.
+    """
+    settings = get_settings(config)
+    db = get_db_session(settings)
+    try:
+        from dmarc_msp.cli.helpers import get_dns_provider
+        from dmarc_msp.services.dns import DNSService
+
+        dns_svc = DNSService(get_dns_provider(settings), settings)
+        result = dns_svc.cleanup_stale_records(db, dry_run=dry_run)
+
+        if dry_run:
+            console.print("[bold]Dry run[/bold] — no records will be deleted.\n")
+
+        if result.stale:
+            action = "Would delete" if dry_run else "Deleted"
+            for domain in result.stale:
+                console.print(f"  [yellow]✗[/yellow] {domain} ({action})")
+
+        for domain, err in result.failed:
+            console.print(f"  [red]✗[/red] {domain}: {err}")
+
+        console.print(
+            f"\nActive: {result.active_skipped}  "
+            f"Stale: {len(result.stale)}  "
+            f"Failed: {len(result.failed)}"
+        )
+    except Exception as e:
+        console.print(f"[red]Error:[/red] {e}")
+        raise typer.Exit(1)
+    finally:
+        db.close()
+
+
 @app.command("bulk-add")
 def bulk_add(
     client: str = typer.Argument(..., help="Client name"),

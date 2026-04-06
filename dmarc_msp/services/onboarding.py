@@ -83,6 +83,10 @@ class OnboardingService:
             )
 
         dns_created = False
+        domain_reserved = False
+        yaml_updated = False
+        was_offboarded = existing and existing.status == DomainStatus.OFFBOARDED.value
+        client_created = False
 
         try:
             # Ensure client exists
@@ -100,19 +104,17 @@ class OnboardingService:
                     index_prefix=index_prefix,
                     commit=False,
                 )
+                client_created = True
 
             is_first = len(client.active_domains) == 0
 
-            # Create DMARC authorization DNS record
-            auth_result = self.dns.create_authorization_record(domain)
-            dns_record = auth_result.record
-            dns_created = not auth_result.already_existed
-
-            # Store domain in DB
-            if existing and existing.status == DomainStatus.OFFBOARDED.value:
+            # Reserve domain in DB first (committed immediately so it is
+            # visible to other sessions).  This prevents cleanup-dns from
+            # deleting a DNS record that is about to be created.
+            if was_offboarded:
                 existing.client_id = client.id
                 existing.status = DomainStatus.PENDING_DNS.value
-                existing.dns_record_id = dns_record.record_id
+                existing.dns_record_id = None
                 existing.dns_verified = False
                 existing.dns_verified_at = None
                 existing.offboarded_at = None
@@ -121,13 +123,21 @@ class OnboardingService:
                 domain_row = DomainRow(
                     client_id=client.id,
                     domain_name=domain,
-                    dns_record_id=dns_record.record_id,
                     status=DomainStatus.PENDING_DNS.value,
                 )
                 self.db.add(domain_row)
+            self.db.commit()
+            domain_reserved = True
+
+            # Create DMARC authorization DNS record
+            auth_result = self.dns.create_authorization_record(domain)
+            dns_record = auth_result.record
+            dns_created = not auth_result.already_existed
+            domain_row.dns_record_id = dns_record.record_id
 
             # Update parsedmarc YAML mapping
             self.parsedmarc.add_domain_mapping(client.index_prefix, domain)
+            yaml_updated = True
 
             # Signal parsedmarc to reload
             self.parsedmarc.reload()
@@ -173,6 +183,17 @@ class OnboardingService:
             # Clean up the DNS record we created so it doesn't become
             # a stale orphan.  Best-effort — if this also fails, log it
             # but don't mask the original exception.
+            if yaml_updated:
+                try:
+                    self.parsedmarc.remove_domain_mapping(
+                        client.index_prefix, domain
+                    )
+                except Exception:
+                    logger.error(
+                        "Failed to clean up YAML mapping for '%s' after "
+                        "rollback — manual cleanup may be needed",
+                        domain,
+                    )
             if dns_created:
                 try:
                     self.dns.delete_authorization_record(domain)
@@ -180,6 +201,24 @@ class OnboardingService:
                     logger.error(
                         "Failed to clean up DNS record for '%s' after "
                         "rollback — manual cleanup may be needed",
+                        domain,
+                    )
+            # Revert the early-committed domain reservation.
+            if domain_reserved:
+                try:
+                    if was_offboarded:
+                        domain_row.status = DomainStatus.OFFBOARDED.value
+                        domain_row.offboarded_at = datetime.now(UTC)
+                    else:
+                        self.db.delete(domain_row)
+                    if client_created:
+                        self.db.delete(client)
+                    self.db.commit()
+                except Exception:
+                    self.db.rollback()
+                    logger.error(
+                        "Failed to revert domain reservation for '%s' — "
+                        "manual cleanup may be needed",
                         domain,
                     )
             raise
@@ -196,7 +235,10 @@ class OnboardingService:
     def remove_domain(self, domain: str, purge_dns: bool = True) -> str:
         """Remove a single domain from monitoring. Returns client name.
 
-        Transactional — rolls back on failure.
+        Transactional — rolls back on failure.  If the DB commit fails
+        after external changes (DNS, YAML), the YAML mapping is restored
+        best-effort.  DNS records are not re-created (cleanup-dns will
+        handle any inconsistency).
         """
         domain = domain.lower().strip()
         domain_row = (
@@ -207,6 +249,7 @@ class OnboardingService:
         if domain_row.status == DomainStatus.OFFBOARDED.value:
             raise DomainNotFoundError(f"Domain '{domain}' is already offboarded")
 
+        yaml_removed = False
         try:
             client = self.client_service.get_by_id(domain_row.client_id)
 
@@ -214,6 +257,7 @@ class OnboardingService:
                 self.dns.delete_authorization_record(domain)
 
             self.parsedmarc.remove_domain_mapping(client.index_prefix, domain)
+            yaml_removed = True
             self.parsedmarc.reload()
 
             domain_row.status = DomainStatus.OFFBOARDED.value
@@ -231,6 +275,17 @@ class OnboardingService:
             return client.name
         except Exception:
             self.db.rollback()
+            if yaml_removed:
+                try:
+                    self.parsedmarc.add_domain_mapping(
+                        client.index_prefix, domain
+                    )
+                except Exception:
+                    logger.error(
+                        "Failed to restore YAML mapping for '%s' after "
+                        "rollback — manual cleanup may be needed",
+                        domain,
+                    )
             raise
 
     def move_domain(self, domain: str, to_client: str) -> MoveResult:
@@ -257,6 +312,7 @@ class OnboardingService:
                 f"Domain '{domain}' already belongs to '{dest_client.name}'"
             )
 
+        yaml_moved = False
         try:
             is_first_for_dest = len(dest_client.active_domains) == 0
 
@@ -264,6 +320,7 @@ class OnboardingService:
             self.parsedmarc.move_domain_mapping(
                 source_client.index_prefix, dest_client.index_prefix, domain
             )
+            yaml_moved = True
             self.parsedmarc.reload()
 
             # Update DB
@@ -300,6 +357,19 @@ class OnboardingService:
             self.db.commit()
         except Exception:
             self.db.rollback()
+            if yaml_moved:
+                try:
+                    self.parsedmarc.move_domain_mapping(
+                        dest_client.index_prefix,
+                        source_client.index_prefix,
+                        domain,
+                    )
+                except Exception:
+                    logger.error(
+                        "Failed to roll back YAML move for '%s' — "
+                        "manual cleanup may be needed",
+                        domain,
+                    )
             raise
 
         return MoveResult(

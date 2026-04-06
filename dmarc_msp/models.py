@@ -82,6 +82,18 @@ class MoveResult(BaseModel):
     to_client: str
 
 
+class CleanupDNSResult(BaseModel):
+    """Result of cleaning up stale DMARC authorization DNS records."""
+
+    stale: list[str] = Field(default_factory=list)
+    """Domains whose authorization records were (or would be) deleted."""
+    failed: list[tuple[str, str]] = Field(default_factory=list)
+    """(domain, error) pairs for deletions that failed."""
+    active_skipped: int = 0
+    """Authorization records matched to active domains (not deleted)."""
+    dry_run: bool = False
+
+
 class BulkResult(BaseModel):
     succeeded: list[str] = Field(default_factory=list)
     skipped: list[str] = Field(default_factory=list)
