@@ -635,7 +635,7 @@ To prevent this, always create the file before starting the stack (included in t
 touch domain_map.yaml
 ```
 
-### How can I review mailbox messages?
+### How can I review mailbox messages in the maildir created by postfix?
 
 After parsedmarc processes emails, it moves them out of the inbox into Maildir archive subfolders. Messages won't be in `Maildir/new/` or `Maildir/cur/` — they'll be in `.Archive.Aggregate/`, `.Archive.Invalid/`, or `.Archive.Forensic/` under the Maildir root.
 
@@ -662,6 +662,14 @@ View a specific message:
 ```bash
 docker exec parsedmarc-postfix cat /var/mail/dmarc/Maildir/.Archive.Aggregate/cur/<filename>
 ```
+
+### I don't want to expose SMTP, can I use the Gmail or Microsoft Graph API instead?
+
+Yes. You can modify the docker-compose file to do that. Just remove the `postfix` service, then configure the parsedmarc service [environment variables](https://domainaware.github.io/parsedmarc/usage.html#environment-variable-configuration) to use parsedmarc's built-in support for Microsoft Graph or the Google APIs.
+
+### Handling DMARC authorization  DNS records are a pain. Can this project handle them at scale?
+
+Yes. over 40 tests a DNS-related, covering items such as bulk onboarding/offboarding at scale (DNS cleanup, consistency, interleaved operations, pre-existing records, race conditions). Keep in mind though that this is still a beta project that was created with the help of AI and my own testing. Do your own testing before deploying this in production.
 
 ## License
 
