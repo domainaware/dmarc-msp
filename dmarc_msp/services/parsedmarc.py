@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import errno
 import fcntl
 import logging
 import os
@@ -110,18 +111,29 @@ class ParsedmarcService:
 
     def _write(self, mapping: dict[str, list[str]]) -> None:
         sorted_mapping = dict(sorted(mapping.items()))
-        # Atomic write: write to a temp file in the same directory, then
-        # rename.  os.rename() is atomic on POSIX, so parsedmarc will
-        # never read a half-written file.
+        # Write to a temp file first, then move into place.
+        # os.rename() is atomic on POSIX, but fails with EBUSY when the
+        # target is a Docker bind mount (mount point).  In that case we
+        # fall back to a direct overwrite, which is safe because all
+        # callers hold the file lock.
         parent = self.domain_map_file.parent
         fd, tmp_path = tempfile.mkstemp(dir=parent, suffix=".tmp")
         try:
             with os.fdopen(fd, "w") as f:
                 f.write(_MANAGED_HEADER)
                 yaml.dump(sorted_mapping, f, default_flow_style=False, sort_keys=True)
-            os.rename(tmp_path, self.domain_map_file)
+            try:
+                os.rename(tmp_path, self.domain_map_file)
+            except OSError as e:
+                if e.errno != errno.EBUSY:
+                    raise
+                # Target is a mount point (Docker bind mount).
+                with open(tmp_path, "rb") as src, open(
+                    self.domain_map_file, "wb"
+                ) as dst:
+                    dst.write(src.read())
+                os.unlink(tmp_path)
         except BaseException:
-            # Clean up the temp file if anything goes wrong
             try:
                 os.unlink(tmp_path)
             except OSError:

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.1 2026-04-11
+
+### Fixed
+
+- Parsedmarc YAML writes no longer fail with `EBUSY` on Docker bind-mounted files. The atomic rename is still attempted first, but falls back to a direct overwrite when the target is a mount point.
+
 ## 0.4.0 2026-04-06
 
 ### Added
