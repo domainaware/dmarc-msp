@@ -85,8 +85,8 @@ http {
         }
 
         # Redirect home app (that read-only users can't use) to dashboards
-        location = /app/home/ {
-          return 302 /app/dashboards;
+        location = /app/home {
+            return 302 /app/dashboards;
         }
     }
 }
