@@ -42,14 +42,28 @@ class DashboardService:
 
         rewritten = self._rewrite_template(index_prefix)
         self._import_saved_objects(tenant_name, rewritten)
+        default_index_id = self._find_default_index_id(rewritten)
+        settings: dict[str, object] = {}
+        if default_index_id:
+            settings["defaultIndex"] = default_index_id
         if self.dark_mode:
-            self.set_dark_mode(tenant_name, enabled=True)
+            settings["theme:darkMode"] = True
+        if settings:
+            self._set_tenant_settings(tenant_name, settings)
         logger.info(
             "Imported dashboards for tenant=%s prefix=%s", tenant_name, index_prefix
         )
 
     def set_dark_mode(self, tenant_name: str, enabled: bool = True) -> None:
         """Set dark mode in a tenant's advanced settings."""
+        self._set_tenant_settings(tenant_name, {"theme:darkMode": enabled})
+        state = "enabled" if enabled else "disabled"
+        logger.info("Dark mode %s for tenant=%s", state, tenant_name)
+
+    def _set_tenant_settings(
+        self, tenant_name: str, changes: dict[str, object]
+    ) -> None:
+        """Write advanced settings into a tenant."""
         url = f"{self.dashboards_url}/api/opensearch-dashboards/settings"
         headers = {
             "osd-xsrf": "true",
@@ -59,11 +73,30 @@ class DashboardService:
             response = client.post(
                 url,
                 headers=headers,
-                json={"changes": {"theme:darkMode": enabled}},
+                json={"changes": changes},
             )
             response.raise_for_status()
-        state = "enabled" if enabled else "disabled"
-        logger.info("Dark mode %s for tenant=%s", state, tenant_name)
+
+    @staticmethod
+    def _find_default_index_id(ndjson: str) -> str | None:
+        """Return the ID of the first ``dmarc_aggregate`` index-pattern
+        in the rewritten NDJSON, falling back to any index-pattern."""
+        fallback: str | None = None
+        for line in ndjson.split("\n"):
+            if not line.strip():
+                continue
+            obj = json.loads(line)
+            if obj.get("type") != "index-pattern":
+                continue
+            oid = obj.get("id")
+            if not oid:
+                continue
+            title = obj.get("attributes", {}).get("title", "")
+            if "dmarc_aggregate" in title:
+                return oid
+            if fallback is None:
+                fallback = oid
+        return fallback
 
     def _rewrite_template(self, index_prefix: str) -> str:
         """Prepend the client's index prefix to all known index patterns.
