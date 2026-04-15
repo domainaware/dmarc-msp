@@ -114,6 +114,12 @@ dashboards:
   # Update this file when parsedmarc releases new dashboard versions.
   saved_objects_template: /etc/dmarc-msp/opensearch_dashboards.ndjson
 
+  # Import DMARC failure/forensic report (RUF) dashboards. These
+  # contain email samples that failed DMARC, which may include message
+  # bodies and headers. Set to true only if parsedmarc is configured to
+  # save forensic reports and you accept the liability of storing them.
+  import_failure_reports: false
+
   # Automatically enable dark mode in each client's tenant when
   # dashboards are imported. Clients can override this individually
   # via: dmarcmsp dashboard dark-mode "<client>" false

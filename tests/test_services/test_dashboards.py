@@ -46,10 +46,76 @@ def _make_template(tmp_path, lines=None):
 
 def test_rewrite_template_prepends_prefix(tmp_path):
     svc = _make_template(tmp_path)
+    svc.import_failure_reports = True
     rewritten = svc._rewrite_template("acme_corp")
     assert '"acme_corp_dmarc_aggregate*"' in rewritten
     assert '"acme_corp_dmarc_f*"' in rewritten
     assert '"acme_corp_smtp_tls*"' in rewritten
+
+
+def test_rewrite_template_excludes_failure_objects_by_default(tmp_path):
+    """Failure index-pattern, its dependents, and orphaned objects
+    referenced only by the failure dashboard are all excluded."""
+    aggregate_pattern = json.dumps(
+        {
+            "type": "index-pattern",
+            "id": "agg-idx",
+            "attributes": {"title": "dmarc_aggregate*"},
+            "references": [],
+        }
+    )
+    failure_index_pattern = json.dumps(
+        {
+            "type": "index-pattern",
+            "id": "fp-idx",
+            "attributes": {"title": "dmarc_f*"},
+            "references": [],
+        }
+    )
+    # Markdown viz with no index-pattern reference — only used by the
+    # failure dashboard, so it should be treated as an orphan.
+    failure_markdown_vis = json.dumps(
+        {
+            "type": "visualization",
+            "id": "fp-md",
+            "attributes": {"title": "About DMARC failure reports (RUF)"},
+            "references": [],
+        }
+    )
+    failure_table_vis = json.dumps(
+        {
+            "type": "visualization",
+            "id": "fp-vis",
+            "attributes": {"title": "Failure samples"},
+            "references": [{"id": "fp-idx", "name": "index", "type": "index-pattern"}],
+        }
+    )
+    failure_dashboard = json.dumps(
+        {
+            "type": "dashboard",
+            "id": "fp-dash",
+            "attributes": {"title": "DMARC failure reports"},
+            "references": [
+                {"id": "fp-md", "name": "panel_0", "type": "visualization"},
+                {"id": "fp-vis", "name": "panel_1", "type": "visualization"},
+            ],
+        }
+    )
+    lines = [
+        aggregate_pattern,
+        failure_index_pattern,
+        failure_markdown_vis,
+        failure_table_vis,
+        failure_dashboard,
+    ]
+    svc = _make_template(tmp_path, lines)
+    rewritten = svc._rewrite_template("acme_corp")
+    assert '"acme_corp_dmarc_aggregate*"' in rewritten
+    assert "dmarc_f" not in rewritten
+    assert "fp-idx" not in rewritten
+    assert "fp-md" not in rewritten
+    assert "fp-vis" not in rewritten
+    assert "fp-dash" not in rewritten
 
 
 def test_rewrite_template_does_not_double_prefix(tmp_path):
