@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.5.0 2026-04-15
+
+### Changed
+
+- Disabled forensic/failure report saving in parsedmarc (`PARSEDMARC_GENERAL_SAVE_FORENSIC=false`) to avoid liability from storing email samples.
+- Failure/forensic dashboard objects (index pattern, visualizations, and dashboard) are no longer imported by default. Controlled by the new `dashboards.import_failure_reports` config option (default `false`).
+- `dmarcmsp dashboard import` and `import-all` now delete previously imported failure objects from existing tenants when `import_failure_reports` is `false`. Run `dmarcmsp dashboard import-all` after upgrading to clean up existing clients.
+- Dashboard imports now explicitly set `defaultIndex` to the aggregate index pattern, preventing a 403 error for read-only users on first visit.
+- Refactored `set_dark_mode` to use a shared `_set_tenant_settings` method.
+
+### Added
+
+- `dashboards.import_failure_reports` config option to control whether failure/forensic report dashboards are imported during client onboarding.
+
 ## 0.4.1 2026-04-11
 
 ### Fixed

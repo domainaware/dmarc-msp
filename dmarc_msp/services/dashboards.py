@@ -41,6 +41,8 @@ class DashboardService:
             )
 
         rewritten = self._rewrite_template(index_prefix)
+        if not self.import_failure_reports:
+            self._delete_failure_objects(tenant_name, index_prefix)
         self._import_saved_objects(tenant_name, rewritten)
         default_index_id = self._find_default_index_id(rewritten)
         settings: dict[str, object] = {}
@@ -143,9 +145,7 @@ class DashboardService:
             if (
                 oid
                 and obj.get("type") == "index-pattern"
-                and obj.get("attributes", {})
-                .get("title", "")
-                .startswith("dmarc_f")
+                and obj.get("attributes", {}).get("title", "").startswith("dmarc_f")
             ):
                 failure_ids.add(oid)
 
@@ -187,6 +187,45 @@ class DashboardService:
                 failure_ids.add(oid)
 
         return [obj for obj in objects if obj.get("id") not in failure_ids]
+
+    def _delete_failure_objects(self, tenant_name: str, index_prefix: str) -> None:
+        """Delete previously imported failure/forensic saved objects from
+        a tenant.  Uses the full (un-filtered) template to discover which
+        objects are failure-related, then deletes them by type and ID."""
+        content = self.template_path.read_text()
+        all_objects = [
+            json.loads(line) for line in content.strip().split("\n") if line.strip()
+        ]
+        kept = self._exclude_failure_objects(all_objects)
+        kept_ids = {obj.get("id") for obj in kept}
+        failure_objects = [
+            obj
+            for obj in all_objects
+            if obj.get("id") and obj.get("id") not in kept_ids
+        ]
+
+        if not failure_objects:
+            return
+
+        headers = {
+            "osd-xsrf": "true",
+            "securitytenant": tenant_name,
+        }
+        with httpx.Client(verify=False, auth=self.auth, timeout=30) as client:
+            for obj in failure_objects:
+                obj_type = obj["type"]
+                obj_id = obj["id"]
+                url = f"{self.dashboards_url}/api/saved_objects/{obj_type}/{obj_id}"
+                resp = client.delete(url, headers=headers)
+                if resp.status_code == 404:
+                    continue
+                resp.raise_for_status()
+                logger.info(
+                    "Deleted %s '%s' from tenant=%s",
+                    obj_type,
+                    obj.get("attributes", {}).get("title", obj_id),
+                    tenant_name,
+                )
 
     def _import_saved_objects(self, tenant_name: str, ndjson: str) -> None:
         """POST the NDJSON to the Dashboards saved objects API."""

@@ -192,9 +192,7 @@ def test_import_for_client_enables_dark_mode_by_default(tmp_path):
         assert mock_client.post.call_count == 2
         dark_mode_call = mock_client.post.call_args_list[1]
         assert "settings" in dark_mode_call.args[0]
-        assert dark_mode_call.kwargs["json"] == {
-            "changes": {"theme:darkMode": True}
-        }
+        assert dark_mode_call.kwargs["json"] == {"changes": {"theme:darkMode": True}}
 
 
 def test_import_for_client_skips_dark_mode_when_disabled(tmp_path):
@@ -227,6 +225,62 @@ def test_import_for_client_skips_dark_mode_when_disabled(tmp_path):
         svc.import_for_client("acme_tenant", "acme_corp")
         # Only saved objects import, no dark mode call
         assert mock_client.post.call_count == 1
+
+
+def test_import_deletes_failure_objects_from_existing_tenant(tmp_path):
+    """Re-importing with import_failure_reports=False deletes old failure
+    saved objects via the Dashboards API before importing the new set."""
+    lines = [
+        json.dumps(
+            {
+                "type": "index-pattern",
+                "id": "agg-id",
+                "attributes": {"title": "dmarc_aggregate*"},
+                "references": [],
+            }
+        ),
+        json.dumps(
+            {
+                "type": "index-pattern",
+                "id": "fail-id",
+                "attributes": {"title": "dmarc_f*"},
+                "references": [],
+            }
+        ),
+        json.dumps(
+            {
+                "type": "visualization",
+                "id": "fail-vis",
+                "attributes": {"title": "Failure samples"},
+                "references": [
+                    {"id": "fail-id", "name": "index", "type": "index-pattern"}
+                ],
+            }
+        ),
+    ]
+    svc = _make_template(tmp_path, lines)
+
+    mock_response = MagicMock()
+    mock_response.json.return_value = {"success": True}
+    mock_response.raise_for_status = MagicMock()
+    mock_response.status_code = 200
+
+    with patch("dmarc_msp.services.dashboards.httpx.Client") as mock_client_cls:
+        mock_client = MagicMock()
+        mock_client.__enter__ = MagicMock(return_value=mock_client)
+        mock_client.__exit__ = MagicMock(return_value=False)
+        mock_client.post.return_value = mock_response
+        mock_client.delete.return_value = mock_response
+        mock_client_cls.return_value = mock_client
+
+        svc.import_for_client("acme_tenant", "acme_corp")
+
+        # Should have DELETE calls for the two failure objects
+        delete_calls = mock_client.delete.call_args_list
+        deleted_urls = [call.args[0] for call in delete_calls]
+        assert any("index-pattern/fail-id" in url for url in deleted_urls)
+        assert any("visualization/fail-vis" in url for url in deleted_urls)
+        assert not any("agg-id" in url for url in deleted_urls)
 
 
 def test_import_for_client_sets_default_index(tmp_path):
@@ -284,9 +338,7 @@ def test_set_dark_mode(tmp_path):
         mock_client.post.assert_called_once()
         call_kwargs = mock_client.post.call_args
         assert call_kwargs.kwargs["headers"]["securitytenant"] == "acme_tenant"
-        assert call_kwargs.kwargs["json"] == {
-            "changes": {"theme:darkMode": True}
-        }
+        assert call_kwargs.kwargs["json"] == {"changes": {"theme:darkMode": True}}
 
 
 def test_import_for_client_api_failure(tmp_path):
