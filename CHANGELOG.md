@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.6.0 2026-04-17
+
+### Changed
+
+- Analysts and client users are no longer added to the `kibana_read_only` role mapping on creation. The role is a UI-only modifier that hid edit controls and caused UI bugs; these accounts have no write permissions through the `analyst` / client tenant roles regardless.
+- Stopped writing the redundant `roles` attribute on internal users. The OpenSearch role mappings are the source of truth for access; the attribute was pure bookkeeping and introduced drift risk. `disable` and `delete` now query live role mappings to determine what to tear down. `reset-password` (for a disabled user) derives the roles to restore from `role_type` and `client_tenant`.
+
+### Removed
+
+- Unused `OpenSearchService.create_role_mapping` method. `add_user_to_role_mapping` already creates mappings on demand.
+- Unused `backend_roles` parameter on `create_internal_user`. The defensive passthrough in `update_internal_user_password` and `update_internal_user_attributes` is retained so admin-set backend roles survive our updates.
+
+### Migration note
+
+Existing analyst and client users keep whatever role mappings they were originally added to — including `kibana_read_only`. This change only affects newly created users. Existing users' stale `attributes.roles` field is also left in place (harmless — nothing reads it). To remove an existing user from the `kibana_read_only` mapping, disable and re-enable the account via `reset-password`; the restored role set is derived from the account type and no longer includes `kibana_read_only`.
+
 ## 0.5.0 2026-04-15
 
 ### Changed

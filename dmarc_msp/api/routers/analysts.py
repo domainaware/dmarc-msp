@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import secrets
 
 from fastapi import APIRouter, HTTPException
@@ -29,13 +28,10 @@ def _handle_error(e: Exception) -> None:
 
 router = APIRouter()
 
-KIBANA_USER = "kibana_user"
-KIBANA_READ_ONLY = "kibana_read_only"
-
 
 @router.post("", response_model=UserCredentials, status_code=201)
 def create_analyst(body: AnalystCreate, os_svc: OpenSearchServiceDep):
-    roles = [OpenSearchService.ANALYST_ROLE, KIBANA_USER, KIBANA_READ_ONLY]
+    roles = [OpenSearchService.ANALYST_ROLE, OpenSearchService.KIBANA_USER]
     password = secrets.token_urlsafe(24)
 
     try:
@@ -45,7 +41,6 @@ def create_analyst(body: AnalystCreate, os_svc: OpenSearchServiceDep):
             password=password,
             attributes={
                 "role_type": "analyst",
-                "roles": json.dumps(roles),
                 "disabled": "false",
             },
             description="Analyst account",
@@ -119,10 +114,8 @@ def disable_analyst(username: str, os_svc: OpenSearchServiceDep):
 @router.delete("/{username}")
 def delete_analyst(username: str, os_svc: OpenSearchServiceDep):
     try:
-        user = os_svc.get_internal_user(username)
-        attrs = user.get("attributes", {})
-        roles = json.loads(attrs.get("roles", "[]"))
-        for role in roles:
+        os_svc.get_internal_user(username)
+        for role in os_svc.get_user_role_mappings(username):
             os_svc.remove_user_from_role_mapping(role, username)
         os_svc.delete_internal_user(username)
         return {"message": f"Deleted analyst account: {username}"}

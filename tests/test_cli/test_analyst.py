@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from unittest.mock import MagicMock, patch
 
 from typer.testing import CliRunner
@@ -46,8 +45,8 @@ def test_analyst_create(tmp_path):
     assert "Password" in result.output
     mock_os.ensure_analyst_role.assert_called_once()
     mock_os.create_internal_user.assert_called_once()
-    # Should map to analyst, kibana_user, and kibana_read_only roles
-    assert mock_os.add_user_to_role_mapping.call_count == 3
+    # Should map to analyst and kibana_user roles
+    assert mock_os.add_user_to_role_mapping.call_count == 2
 
 
 def test_analyst_create_opensearch_unreachable(tmp_path):
@@ -106,10 +105,9 @@ def test_analyst_delete(tmp_path):
     with patch("dmarc_msp.cli.analyst.get_opensearch_service") as mock_get:
         mock_os = MagicMock()
         mock_os.get_internal_user.return_value = {
-            "attributes": {
-                "roles": json.dumps(["analyst", "kibana_read_only"]),
-            }
+            "attributes": {"role_type": "analyst"}
         }
+        mock_os.get_user_role_mappings.return_value = ["analyst", "kibana_user"]
         mock_get.return_value = mock_os
 
         result = runner.invoke(
@@ -118,6 +116,7 @@ def test_analyst_delete(tmp_path):
 
     assert result.exit_code == 0
     assert "Deleted" in result.output
+    assert mock_os.remove_user_from_role_mapping.call_count == 2
     mock_os.delete_internal_user.assert_called_once_with("testanalyst")
 
 

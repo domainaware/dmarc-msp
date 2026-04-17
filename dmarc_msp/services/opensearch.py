@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import logging
 import secrets
 
@@ -23,6 +22,9 @@ class UserAlreadyExistsError(Exception):
 
 class OpenSearchService:
     """Manages OpenSearch tenants, roles, and role mappings for client isolation."""
+
+    ANALYST_ROLE = "analyst"
+    KIBANA_USER = "kibana_user"
 
     def __init__(self, config: OpenSearchConfig):
         self.client = OpenSearch(
@@ -103,21 +105,6 @@ class OpenSearchService:
         except NotFoundError:
             logger.warning("Role '%s' not found for deletion", role_name)
 
-    def create_role_mapping(
-        self, tenant_name: str, backend_roles: list[str] | None = None
-    ) -> None:
-        """Map users/backend roles to the client role."""
-        role_name = tenant_name
-        body: dict = {}
-        if backend_roles:
-            body["backend_roles"] = backend_roles
-        self.client.transport.perform_request(
-            "PUT",
-            f"/_plugins/_security/api/rolesmapping/{role_name}",
-            body=body,
-        )
-        logger.info("Created role mapping for: %s", role_name)
-
     def delete_role_mapping(self, tenant_name: str) -> None:
         """Delete the role mapping for a client role."""
         role_name = tenant_name
@@ -149,7 +136,6 @@ class OpenSearchService:
         self,
         username: str,
         password: str,
-        backend_roles: list[str] | None = None,
         attributes: dict[str, str] | None = None,
         description: str = "",
     ) -> None:
@@ -162,7 +148,6 @@ class OpenSearchService:
             raise UserAlreadyExistsError(f"User '{username}' already exists")
         body: dict = {
             "password": password,
-            "backend_roles": backend_roles or [],
             "attributes": attributes or {},
             "description": description,
         }
@@ -287,9 +272,19 @@ class OpenSearchService:
         )
         logger.info("Removed user '%s' from role mapping '%s'", username, role_name)
 
-    # ── Analyst role ──────────────────────────────────────────────────
+    def get_user_role_mappings(self, username: str) -> list[str]:
+        """Return all role mapping names that include the given user."""
+        all_mappings = self.client.transport.perform_request(
+            "GET",
+            "/_plugins/_security/api/rolesmapping",
+        )
+        return sorted(
+            role
+            for role, data in all_mappings.items()
+            if username in data.get("users", [])
+        )
 
-    ANALYST_ROLE = "analyst"
+    # ── Analyst role ──────────────────────────────────────────────────
 
     def ensure_analyst_role(self) -> None:
         """Create or update the analyst role with read-only
@@ -333,10 +328,9 @@ class OpenSearchService:
         they have no access. To re-enable, use reset-password.
         """
         user = self.get_internal_user(username)
-        attrs = user.get("attributes", {})
-        roles = json.loads(attrs.get("roles", "[]"))
+        attrs = dict(user.get("attributes", {}))
+        roles = self.get_user_role_mappings(username)
 
-        # Change password to unknown random value — prevents login
         random_password = secrets.token_urlsafe(32)
         self.update_internal_user_password(username, random_password)
 
@@ -349,13 +343,31 @@ class OpenSearchService:
         return roles
 
     def restore_user_roles(self, username: str) -> list[str]:
-        """Restore role mappings for a disabled user and clear the disabled flag."""
+        """Restore role mappings for a disabled user and clear the disabled flag.
+
+        The target roles are derived from the user's `role_type` attribute
+        (analyst → [ANALYST_ROLE, KIBANA_USER]; client → [client_tenant, KIBANA_USER]).
+        """
         user = self.get_internal_user(username)
-        attrs = user.get("attributes", {})
+        attrs = dict(user.get("attributes", {}))
         if attrs.get("disabled") != "true":
             return []
 
-        roles = json.loads(attrs.get("roles", "[]"))
+        role_type = attrs.get("role_type")
+        if role_type == "analyst":
+            roles = [self.ANALYST_ROLE, self.KIBANA_USER]
+        elif role_type == "client":
+            tenant = attrs.get("client_tenant")
+            if not tenant:
+                raise ValueError(
+                    f"Client user '{username}' missing client_tenant attribute"
+                )
+            roles = [tenant, self.KIBANA_USER]
+        else:
+            raise ValueError(
+                f"Cannot restore user '{username}': unknown role_type {role_type!r}"
+            )
+
         for role in roles:
             self.add_user_to_role_mapping(role, username)
 

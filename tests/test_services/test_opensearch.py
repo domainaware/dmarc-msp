@@ -105,21 +105,6 @@ def test_delete_client_role_not_found():
     svc.delete_client_role("client_acme_corp")
 
 
-def test_create_role_mapping_with_backend_roles():
-    svc, mock_client = _make_service()
-    svc.create_role_mapping("client_acme_corp", backend_roles=["admin"])
-    call = mock_client.transport.perform_request.call_args
-    assert call[0][0] == "PUT"
-    assert call[1]["body"]["backend_roles"] == ["admin"]
-
-
-def test_create_role_mapping_without_backend_roles():
-    svc, mock_client = _make_service()
-    svc.create_role_mapping("client_acme_corp")
-    call = mock_client.transport.perform_request.call_args
-    assert "backend_roles" not in call[1]["body"]
-
-
 def test_delete_client_indices():
     svc, mock_client = _make_service()
     svc.delete_client_indices("acme")
@@ -148,7 +133,6 @@ def test_create_internal_user():
     svc.create_internal_user(
         "analyst1",
         "secret123",
-        backend_roles=["kibana_read_only"],
         attributes={"role_type": "analyst"},
         description="Test analyst",
     )
@@ -156,7 +140,7 @@ def test_create_internal_user():
     assert call[0] == ("PUT", "/_plugins/_security/api/internalusers/analyst1")
     body = call[1]["body"]
     assert body["password"] == "secret123"
-    assert body["backend_roles"] == ["kibana_read_only"]
+    assert "backend_roles" not in body
     assert body["attributes"]["role_type"] == "analyst"
     assert body["description"] == "Test analyst"
 
@@ -232,10 +216,11 @@ def test_list_internal_users():
     assert "admin" in result
 
 
-def test_update_internal_user_password():
+def test_update_internal_user_password_preserves_backend_roles():
+    """Admin-set backend_roles must survive a password update."""
     svc, mock_client = _make_service()
     mock_client.transport.perform_request.side_effect = [
-        {"analyst1": {"attributes": {"roles": "[]"}, "backend_roles": ["br1"]}},
+        {"analyst1": {"attributes": {"role_type": "analyst"}, "backend_roles": ["br1"]}},
         None,  # PUT
     ]
     svc.update_internal_user_password("analyst1", "newpass")
@@ -247,7 +232,7 @@ def test_update_internal_user_password():
     assert put_call[1]["body"] == {
         "password": "newpass",
         "backend_roles": ["br1"],
-        "attributes": {"roles": "[]"},
+        "attributes": {"role_type": "analyst"},
     }
 
 
@@ -327,78 +312,106 @@ def test_ensure_analyst_role():
     assert body["tenant_permissions"][0]["allowed_actions"] == ["kibana_all_read"]
 
 
+def test_get_user_role_mappings():
+    svc, mock_client = _make_service()
+    mock_client.transport.perform_request.return_value = {
+        "analyst": {"users": ["testuser", "other"]},
+        "kibana_user": {"users": ["testuser"]},
+        "admin": {"users": ["someone_else"]},
+        "unused": {},
+    }
+    result = svc.get_user_role_mappings("testuser")
+    assert result == ["analyst", "kibana_user"]
+
+
 def test_disable_user():
     svc, mock_client = _make_service()
-    import json
 
-    roles = ["analyst", "kibana_read_only"]
     user_data = {
         "testuser": {
             "attributes": {
                 "role_type": "analyst",
-                "roles": json.dumps(roles),
                 "disabled": "false",
             }
         }
     }
-    # Calls: GET users (get_internal_user),
-    #        GET users + PATCH (update_internal_user_password),
-    #        GET+PUT mapping (analyst), GET+PUT mapping (kibana),
-    #        GET users + PATCH (update_internal_user_attributes)
+    all_mappings = {
+        "analyst": {"users": ["testuser"]},
+        "kibana_user": {"users": ["testuser"]},
+        "other": {"users": ["someone_else"]},
+    }
     mock_client.transport.perform_request.side_effect = [
-        user_data,  # _check_user_exists (get_internal_user)
+        user_data,  # get_internal_user
+        all_mappings,  # get_user_role_mappings
         user_data,  # _check_user_exists (update_internal_user_password)
-        None,  # PATCH password
+        None,  # PUT password
         {"analyst": {"users": ["testuser"]}},  # GET mapping for analyst
         None,  # PUT mapping for analyst
-        {"kibana_read_only": {"users": ["testuser"]}},  # GET mapping for kibana
-        None,  # PUT mapping for kibana
+        {"kibana_user": {"users": ["testuser"]}},  # GET mapping for kibana_user
+        None,  # PUT mapping for kibana_user
         user_data,  # _check_user_exists (update_internal_user_attributes)
-        None,  # PATCH attributes
+        None,  # PUT attributes
     ]
     result = svc.disable_user("testuser")
-    assert result == roles
+    assert result == ["analyst", "kibana_user"]
 
 
-def test_restore_user_roles():
+def test_restore_user_roles_analyst():
     svc, mock_client = _make_service()
-    import json
 
-    roles = ["analyst", "kibana_read_only"]
     user_data = {
         "testuser": {
             "attributes": {
                 "role_type": "analyst",
-                "roles": json.dumps(roles),
                 "disabled": "true",
             }
         }
     }
-    # Calls: GET users (get_internal_user),
-    #        GET+PUT mapping (analyst), GET+PUT mapping (kibana),
-    #        GET users + PATCH (update_internal_user_attributes)
     mock_client.transport.perform_request.side_effect = [
-        user_data,  # _check_user_exists (get_internal_user)
-        NotFoundError(404, "not found"),  # GET mapping for analyst (doesn't exist)
+        user_data,  # get_internal_user
+        NotFoundError(404, "not found"),  # GET mapping for analyst
         None,  # PUT mapping for analyst
-        NotFoundError(404, "not found"),  # GET mapping for kibana
-        None,  # PUT mapping for kibana
+        NotFoundError(404, "not found"),  # GET mapping for kibana_user
+        None,  # PUT mapping for kibana_user
         user_data,  # _check_user_exists (update_internal_user_attributes)
-        None,  # PATCH attributes
+        None,  # PUT attributes
     ]
     result = svc.restore_user_roles("testuser")
-    assert result == roles
+    assert result == ["analyst", "kibana_user"]
+
+
+def test_restore_user_roles_client():
+    svc, mock_client = _make_service()
+
+    user_data = {
+        "clientuser": {
+            "attributes": {
+                "role_type": "client",
+                "client_tenant": "client_acme_corp",
+                "disabled": "true",
+            }
+        }
+    }
+    mock_client.transport.perform_request.side_effect = [
+        user_data,  # get_internal_user
+        NotFoundError(404, "not found"),  # GET mapping for tenant
+        None,  # PUT mapping for tenant
+        NotFoundError(404, "not found"),  # GET mapping for kibana_user
+        None,  # PUT mapping for kibana_user
+        user_data,  # _check_user_exists (update_internal_user_attributes)
+        None,  # PUT attributes
+    ]
+    result = svc.restore_user_roles("clientuser")
+    assert result == ["client_acme_corp", "kibana_user"]
 
 
 def test_restore_user_roles_not_disabled():
     svc, mock_client = _make_service()
-    import json
 
     user_data = {
         "testuser": {
             "attributes": {
                 "role_type": "analyst",
-                "roles": json.dumps(["analyst"]),
                 "disabled": "false",
             }
         }
@@ -406,3 +419,34 @@ def test_restore_user_roles_not_disabled():
     mock_client.transport.perform_request.return_value = user_data
     result = svc.restore_user_roles("testuser")
     assert result == []
+
+
+def test_restore_user_roles_unknown_role_type():
+    svc, mock_client = _make_service()
+
+    user_data = {
+        "testuser": {
+            "attributes": {
+                "disabled": "true",
+            }
+        }
+    }
+    mock_client.transport.perform_request.return_value = user_data
+    with pytest.raises(ValueError, match="unknown role_type"):
+        svc.restore_user_roles("testuser")
+
+
+def test_restore_user_roles_client_missing_tenant():
+    svc, mock_client = _make_service()
+
+    user_data = {
+        "testuser": {
+            "attributes": {
+                "role_type": "client",
+                "disabled": "true",
+            }
+        }
+    }
+    mock_client.transport.perform_request.return_value = user_data
+    with pytest.raises(ValueError, match="missing client_tenant"):
+        svc.restore_user_roles("testuser")

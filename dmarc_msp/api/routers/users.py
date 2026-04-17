@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import secrets
 
 from fastapi import APIRouter, HTTPException
@@ -11,7 +10,11 @@ from opensearchpy import TransportError
 from dmarc_msp.api.dependencies import ClientServiceDep, OpenSearchServiceDep
 from dmarc_msp.api.schemas import ClientUserCreate, UserCredentials, UserInfo
 from dmarc_msp.services.clients import ClientNotFoundError
-from dmarc_msp.services.opensearch import UserAlreadyExistsError, UserNotFoundError
+from dmarc_msp.services.opensearch import (
+    OpenSearchService,
+    UserAlreadyExistsError,
+    UserNotFoundError,
+)
 
 
 def _handle_error(e: Exception) -> None:
@@ -27,9 +30,6 @@ def _handle_error(e: Exception) -> None:
 
 
 router = APIRouter()
-
-KIBANA_USER = "kibana_user"
-KIBANA_READ_ONLY = "kibana_read_only"
 
 
 @router.post(
@@ -48,7 +48,7 @@ def create_client_user(
     except ClientNotFoundError as e:
         raise HTTPException(404, str(e))
 
-    roles = [client.tenant_name, KIBANA_USER, KIBANA_READ_ONLY]
+    roles = [client.tenant_name, OpenSearchService.KIBANA_USER]
     password = secrets.token_urlsafe(24)
 
     try:
@@ -58,7 +58,6 @@ def create_client_user(
             attributes={
                 "role_type": "client",
                 "client_tenant": client.tenant_name,
-                "roles": json.dumps(roles),
                 "disabled": "false",
             },
             description=f"Client user for {client.name}",
@@ -144,10 +143,8 @@ def disable_user(username: str, os_svc: OpenSearchServiceDep):
 @router.delete("/users/{username}")
 def delete_user(username: str, os_svc: OpenSearchServiceDep):
     try:
-        user = os_svc.get_internal_user(username)
-        attrs = user.get("attributes", {})
-        roles = json.loads(attrs.get("roles", "[]"))
-        for role in roles:
+        os_svc.get_internal_user(username)
+        for role in os_svc.get_user_role_mappings(username):
             os_svc.remove_user_from_role_mapping(role, username)
         os_svc.delete_internal_user(username)
         return {"message": f"Deleted client user: {username}"}

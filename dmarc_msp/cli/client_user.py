@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import secrets
 
 import typer
@@ -16,13 +15,14 @@ from dmarc_msp.cli.helpers import (
     get_settings,
 )
 from dmarc_msp.services.clients import ClientService
-from dmarc_msp.services.opensearch import UserAlreadyExistsError, UserNotFoundError
+from dmarc_msp.services.opensearch import (
+    OpenSearchService,
+    UserAlreadyExistsError,
+    UserNotFoundError,
+)
 
 app = typer.Typer(help="Client user account management.", no_args_is_help=True)
 console = Console()
-
-KIBANA_USER = "kibana_user"
-KIBANA_READ_ONLY = "kibana_read_only"
 
 
 def _generate_password() -> str:
@@ -74,17 +74,15 @@ def create(
             console.print(f"[red]Error:[/red] Cannot connect to OpenSearch: {e}")
             raise typer.Exit(1)
 
-        roles = [client_row.tenant_name, KIBANA_USER, KIBANA_READ_ONLY]
+        roles = [client_row.tenant_name, OpenSearchService.KIBANA_USER]
         password = _generate_password()
 
         os_svc.create_internal_user(
             username=username,
             password=password,
-            backend_roles=[],
             attributes={
                 "role_type": "client",
                 "client_tenant": client_row.tenant_name,
-                "roles": json.dumps(roles),
                 "disabled": "false",
             },
             description=f"Client user for {client_row.name}",
@@ -165,10 +163,8 @@ def delete(
     os_svc = get_opensearch_service(settings)
 
     try:
-        user = os_svc.get_internal_user(username)
-        attrs = user.get("attributes", {})
-        roles = json.loads(attrs.get("roles", "[]"))
-        for role in roles:
+        os_svc.get_internal_user(username)
+        for role in os_svc.get_user_role_mappings(username):
             os_svc.remove_user_from_role_mapping(role, username)
         os_svc.delete_internal_user(username)
         console.print(f"[green]Deleted client user: {username}[/green]")

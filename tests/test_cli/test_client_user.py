@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from unittest.mock import MagicMock, patch
 
 from typer.testing import CliRunner
@@ -163,10 +162,12 @@ def test_client_user_delete(tmp_path):
     with patch("dmarc_msp.cli.client_user.get_opensearch_service") as mock_get:
         mock_os = MagicMock()
         mock_os.get_internal_user.return_value = {
-            "attributes": {
-                "roles": json.dumps(["client_acme_corp", "kibana_read_only"]),
-            }
+            "attributes": {"role_type": "client", "client_tenant": "client_acme_corp"}
         }
+        mock_os.get_user_role_mappings.return_value = [
+            "client_acme_corp",
+            "kibana_user",
+        ]
         mock_get.return_value = mock_os
 
         result = runner.invoke(
@@ -175,6 +176,7 @@ def test_client_user_delete(tmp_path):
 
     assert result.exit_code == 0
     assert "Deleted" in result.output
+    assert mock_os.remove_user_from_role_mapping.call_count == 2
     mock_os.delete_internal_user.assert_called_once_with("testuser")
 
 

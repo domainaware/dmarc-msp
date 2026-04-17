@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import secrets
 
 import typer
@@ -19,9 +18,6 @@ from dmarc_msp.services.opensearch import (
 
 app = typer.Typer(help="Analyst account management.", no_args_is_help=True)
 console = Console()
-
-KIBANA_USER = "kibana_user"
-KIBANA_READ_ONLY = "kibana_read_only"
 
 
 def _generate_password() -> str:
@@ -68,7 +64,7 @@ def create(
         console.print(f"[red]Error:[/red] Cannot connect to OpenSearch: {e}")
         raise typer.Exit(1)
 
-    roles = [OpenSearchService.ANALYST_ROLE, KIBANA_USER, KIBANA_READ_ONLY]
+    roles = [OpenSearchService.ANALYST_ROLE, OpenSearchService.KIBANA_USER]
     password = _generate_password()
 
     try:
@@ -76,10 +72,8 @@ def create(
         os_svc.create_internal_user(
             username=username,
             password=password,
-            backend_roles=[],
             attributes={
                 "role_type": "analyst",
-                "roles": json.dumps(roles),
                 "disabled": "false",
             },
             description="Analyst account — read-only access to all client tenants",
@@ -154,11 +148,8 @@ def delete(
     os_svc = get_opensearch_service(settings)
 
     try:
-        # Remove from role mappings before deleting
-        user = os_svc.get_internal_user(username)
-        attrs = user.get("attributes", {})
-        roles = json.loads(attrs.get("roles", "[]"))
-        for role in roles:
+        os_svc.get_internal_user(username)
+        for role in os_svc.get_user_role_mappings(username):
             os_svc.remove_user_from_role_mapping(role, username)
         os_svc.delete_internal_user(username)
         console.print(f"[green]Deleted analyst account: {username}[/green]")
