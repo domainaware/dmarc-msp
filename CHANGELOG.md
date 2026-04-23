@@ -15,10 +15,12 @@
 - `dmarcmsp migrate refill-enrichment` silently produced zero updates on
   every run. The in-container lookup helper passed `parallel=False` to
   `parsedmarc.utils.get_ip_address_info`, which has no such kwarg, so every
-  IP raised `TypeError` and returned `None`. Removed the bad kwarg.
-  Lookup-helper stderr is now logged at warning level, and the service
-  raises loudly if every IP in a chunk fails instead of continuing to an
-  empty patch.
+  IP raised `TypeError`. A broad `except Exception` inside the lookup
+  script masked the error as `{ip: None}`, which then fell through as a
+  no-op patch. Removed the bad kwarg and dropped the per-IP try/except so
+  programming errors surface as a non-zero subprocess exit — the existing
+  `CalledProcessError` handler then raises with the real traceback.
+  Lookup-helper stderr is also logged at warning level now.
 
 ## 0.6.1 2026-04-23
 
