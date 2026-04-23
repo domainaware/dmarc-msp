@@ -275,7 +275,12 @@ class MigrationService:
     def _collect_source_ips(self, index_pattern: str) -> set[str]:
         """Return the set of unique source_ip_address values across the
         matching indices. Uses a composite terms aggregation so it scales
-        past the 10k terms-agg default without loading every doc."""
+        past the 10k terms-agg default without loading every doc.
+
+        parsedmarc's dynamic mapping gives every string field a ``.keyword``
+        subfield; aggregations and terms filters on the text field fail with
+        a fielddata error, so we always target ``<field>.keyword``.
+        """
         ips: set[str] = set()
         after: dict | None = None
         while True:
@@ -286,7 +291,11 @@ class MigrationService:
                         "composite": {
                             "size": 1000,
                             "sources": [
-                                {"ip": {"terms": {"field": "source_ip_address"}}}
+                                {
+                                    "ip": {
+                                        "terms": {"field": "source_ip_address.keyword"}
+                                    }
+                                }
                             ],
                         }
                     }
@@ -361,7 +370,9 @@ class MigrationService:
         poll_interval: float,
     ) -> int:
         body = {
-            "query": {"terms": {"source_ip_address": list(ip_to_enrichment.keys())}},
+            "query": {
+                "terms": {"source_ip_address.keyword": list(ip_to_enrichment.keys())}
+            },
             "script": {
                 "source": _ENRICHMENT_PATCH_SCRIPT,
                 "lang": "painless",

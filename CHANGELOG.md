@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.6.2 2026-04-23
+
+### Fixed
+
+- `dmarcmsp migrate refill-enrichment` (and `migrate all`) no longer fails
+  with a `fielddata` error. The composite aggregation that collects unique
+  source IPs and the terms filter that targets docs for the patch step
+  both now use `source_ip_address.keyword` instead of the text field.
+- `dmarcmsp migrate rename-asn-fields` now refreshes each tenant's cached
+  index-pattern field list after the rename, so Discover stops warning that
+  `source_as_name` / `source_as_domain` have no cached mapping. Pass
+  `--skip-refresh` to opt out.
+
 ## 0.6.1 2026-04-23
 
 ### Added

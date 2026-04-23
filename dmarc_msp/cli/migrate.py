@@ -38,6 +38,24 @@ def _parse_fields(raw: str) -> list[str]:
     return items
 
 
+def _refresh_tenant_index_patterns(settings, clients, indent: str = "  ") -> int:
+    """Rebuild each tenant's cached index-pattern field list. Returns the
+    number of tenants that failed."""
+    dash_svc = DashboardService(settings.dashboards, settings.opensearch)
+    failed = 0
+    for c in clients:
+        try:
+            n = dash_svc.refresh_index_pattern_fields(c.tenant_name)
+            console.print(
+                f"{indent}[green]✓[/green] {c.name} (tenant={c.tenant_name}) "
+                f"— refreshed {n} index-pattern(s)"
+            )
+        except Exception as e:
+            failed += 1
+            console.print(f"{indent}[red]✗[/red] {c.name}: {e}")
+    return failed
+
+
 @app.command("rename-asn-fields")
 def rename_asn_fields(
     index_pattern: str = typer.Option(
@@ -45,10 +63,16 @@ def rename_asn_fields(
         "--index-pattern",
         help="Comma-separated OpenSearch index pattern to target.",
     ),
+    skip_refresh: bool = typer.Option(
+        False,
+        "--skip-refresh",
+        help="Don't refresh Dashboards index-pattern field caches afterward.",
+    ),
     config: str | None = typer.Option(None, "--config", "-c"),
 ):
     """Rename ``source_asn_{name,domain}`` → ``source_as_{name,domain}``
-    in existing documents."""
+    in existing documents, then refresh each tenant's cached index-pattern
+    fields so Discover picks up the new field names."""
     settings = get_settings(config)
     svc = MigrationService(settings.opensearch, settings.parsedmarc.container)
     console.print(f"Running ASN rename on [bold]{index_pattern}[/bold]…")
@@ -57,7 +81,17 @@ def rename_asn_fields(
         f"  scanned: {result.total}  updated: [green]{result.updated}[/green]  "
         f"failures: {result.failures}"
     )
-    if result.failures:
+    refresh_failed = 0
+    if not skip_refresh:
+        db = get_db_session(settings)
+        try:
+            clients = ClientService(db).list(include_offboarded=False)
+            if clients:
+                console.print("Refreshing index-pattern fields per tenant…")
+                refresh_failed = _refresh_tenant_index_patterns(settings, clients)
+        finally:
+            db.close()
+    if result.failures or refresh_failed:
         raise typer.Exit(1)
 
 
@@ -81,21 +115,8 @@ def refresh_index_fields(
         if not clients:
             console.print("No active clients found.")
             return
-        dash_svc = DashboardService(settings.dashboards, settings.opensearch)
-        failed: list[tuple[str, Exception]] = []
-        for c in clients:
-            try:
-                n = dash_svc.refresh_index_pattern_fields(c.tenant_name)
-                console.print(
-                    f"  [green]✓[/green] {c.name} (tenant={c.tenant_name}) "
-                    f"— refreshed {n} index-pattern(s)"
-                )
-            except Exception as e:
-                failed.append((c.name, e))
-                console.print(f"  [red]✗[/red] {c.name}: {e}")
-        console.print(
-            f"\nRefreshed {len(clients) - len(failed)}/{len(clients)} tenants."
-        )
+        failed = _refresh_tenant_index_patterns(settings, clients)
+        console.print(f"\nRefreshed {len(clients) - failed}/{len(clients)} tenants.")
         if failed:
             raise typer.Exit(1)
     finally:
@@ -180,17 +201,7 @@ def run_all(
     db = get_db_session(settings)
     try:
         clients = ClientService(db).list(include_offboarded=False)
-        dash_svc = DashboardService(settings.dashboards, settings.opensearch)
-        failed: list[tuple[str, Exception]] = []
-        for c in clients:
-            try:
-                n = dash_svc.refresh_index_pattern_fields(c.tenant_name)
-                console.print(
-                    f"    [green]✓[/green] {c.name} — refreshed {n} index-pattern(s)"
-                )
-            except Exception as e:
-                failed.append((c.name, e))
-                console.print(f"    [red]✗[/red] {c.name}: {e}")
+        failed = _refresh_tenant_index_patterns(settings, clients, indent="    ")
     finally:
         db.close()
 
