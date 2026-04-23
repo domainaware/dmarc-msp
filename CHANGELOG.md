@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.6.3 2026-04-23
+
+### Fixed
+
+- `dmarcmsp migrate refill-enrichment` now actually re-enriches `source_name`
+  and `source_type`. The lookup helper called
+  `parsedmarc.utils.get_ip_address_info(ip, offline=True)`, which
+  short-circuits the PTR lookup; that in turn skipped the reverse-DNS map
+  entirely (the map is only consulted after a successful PTR), so `name` and
+  `type` always came back `None` and the patch loop silently no-op'd those
+  fields. Only `source_country` (and ASN fields, when the container's
+  parsedmarc returns them) were ever getting updated. The in-container helper
+  now runs online and preloads the reverse-DNS map once per batch so it
+  isn't re-fetched from GitHub per IP. The 0.6.2 fix unblocked the
+  subprocess from crashing but `source_name` / `source_type` were never
+  going to update regardless.
+
 ## 0.6.2 2026-04-23
 
 ### Fixed
