@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.6.2 2026-04-23
+
+### Fixed
+
+- `dmarcmsp migrate refill-enrichment` (and `migrate all`) no longer fails
+  with a `fielddata` error. The composite aggregation that collects unique
+  source IPs and the terms filter that targets docs for the patch step
+  both now use `source_ip_address.keyword` instead of the text field.
+
 ## 0.6.1 2026-04-23
 
 ### Added
