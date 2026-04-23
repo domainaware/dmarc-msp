@@ -96,7 +96,7 @@ ips = json.load(sys.stdin)
 out = {}
 for ip in ips:
     try:
-        info = get_ip_address_info(ip, offline=True, parallel=False)
+        info = get_ip_address_info(ip, offline=True)
         out[ip] = info
     except Exception as exc:
         out[ip] = None
@@ -354,14 +354,23 @@ class MigrationService:
                 f"{e.stderr.strip() or e.stdout.strip()}"
             ) from e
         if proc.stderr.strip():
-            logger.debug("parsedmarc lookup stderr: %s", proc.stderr.strip())
+            logger.warning("parsedmarc lookup stderr: %s", proc.stderr.strip())
         try:
-            return json.loads(proc.stdout)
+            results = json.loads(proc.stdout)
         except json.JSONDecodeError as e:
             raise RuntimeError(
                 f"Could not parse parsedmarc lookup output: {e}\n"
                 f"stdout: {proc.stdout[:500]}"
             ) from e
+        if ips and all(v is None for v in results.values()):
+            first_err = proc.stderr.strip().splitlines()[:1]
+            hint = first_err[0] if first_err else "no stderr from parsedmarc"
+            raise RuntimeError(
+                "parsedmarc enrichment lookup returned no results for any of "
+                f"{len(ips)} IP(s). This usually means the lookup helper raised "
+                f"inside the parsedmarc container. First error: {hint}"
+            )
+        return results
 
     def _apply_enrichment_patch(
         self,
