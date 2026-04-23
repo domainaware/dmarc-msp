@@ -277,9 +277,9 @@ class MigrationService:
         matching indices. Uses a composite terms aggregation so it scales
         past the 10k terms-agg default without loading every doc.
 
-        parsedmarc's dynamic mapping stores source_ip_address as text with a
-        ``.keyword`` subfield; aggregating on text fields is disabled by
-        default, hence the ``.keyword`` target.
+        parsedmarc's dynamic mapping gives every string field a ``.keyword``
+        subfield; aggregations and terms filters on the text field fail with
+        a fielddata error, so we always target ``<field>.keyword``.
         """
         ips: set[str] = set()
         after: dict | None = None
