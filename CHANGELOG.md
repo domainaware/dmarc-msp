@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.6.1 2026-04-23
+
+### Added
+
+- `dmarcmsp migrate` CLI group with one-shot data-repair commands for
+  existing OpenSearch indices after a parsedmarc upgrade:
+  - `migrate rename-asn-fields` renames `source_asn_{name,domain}` to
+    `source_as_{name,domain}` on historical docs.
+  - `migrate refill-enrichment` re-derives IP-based enrichment fields
+    (`source_country`, `source_name`, `source_type`, `source_as_name`,
+    `source_as_domain`) by invoking `parsedmarc.utils.get_ip_address_info`
+    inside the parsedmarc container, so historical data matches the
+    enrichment new docs receive. Configurable via `--fields`.
+  - `migrate refresh-index-fields` rebuilds each tenant's cached
+    index-pattern field list from the live OpenSearch mapping, picking
+    up newly added or renamed parsedmarc fields.
+  - `migrate all` runs all three in order.
+- `DashboardService.refresh_index_pattern_fields(tenant_name)` backing
+  the per-tenant field refresh.
+
 ## 0.6.0 2026-04-17
 
 ### Changed
