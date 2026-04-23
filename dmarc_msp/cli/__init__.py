@@ -22,6 +22,7 @@ from dmarc_msp.cli.client import app as client_app  # noqa: E402
 from dmarc_msp.cli.client_user import app as client_user_app  # noqa: E402
 from dmarc_msp.cli.dashboard import app as dashboard_app  # noqa: E402
 from dmarc_msp.cli.domain import app as domain_app  # noqa: E402
+from dmarc_msp.cli.migrate import app as migrate_app  # noqa: E402
 from dmarc_msp.cli.parsedmarc import app as parsedmarc_app  # noqa: E402
 from dmarc_msp.cli.retention import app as retention_app  # noqa: E402
 from dmarc_msp.cli.server import app as server_app  # noqa: E402
@@ -43,6 +44,7 @@ app.add_typer(dashboard_app, name="dashboard")
 app.add_typer(dashboard_app, name="dashboards", hidden=True)
 app.add_typer(parsedmarc_app, name="parsedmarc")
 app.add_typer(retention_app, name="retention")
+app.add_typer(migrate_app, name="migrate")
 app.add_typer(server_app, name="server", hidden=True)
 
 

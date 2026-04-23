@@ -62,6 +62,60 @@ class DashboardService:
         state = "enabled" if enabled else "disabled"
         logger.info("Dark mode %s for tenant=%s", state, tenant_name)
 
+    def refresh_index_pattern_fields(self, tenant_name: str) -> int:
+        """Rebuild the cached ``attributes.fields`` list on every
+        index-pattern saved object in a tenant.
+
+        The template NDJSON ships with a cached field list baked in, which
+        goes stale whenever parsedmarc adds, renames, or removes fields.
+        Dashboards will not auto-refresh — it just shows whatever was in
+        the saved object at import time. This forces a refresh by asking
+        Dashboards for the current mapping-derived fields and writing them
+        back onto the saved object.
+
+        Returns the number of index-patterns refreshed.
+        """
+        headers = {
+            "osd-xsrf": "true",
+            "securitytenant": tenant_name,
+        }
+        meta_fields = ["_source", "_id", "_type", "_index", "_score"]
+        refreshed = 0
+        with httpx.Client(verify=False, auth=self.auth, timeout=60) as client:
+            find = client.get(
+                f"{self.dashboards_url}/api/saved_objects/_find",
+                headers=headers,
+                params={"type": "index-pattern", "per_page": 100},
+            )
+            find.raise_for_status()
+            for obj in find.json().get("saved_objects", []):
+                oid = obj["id"]
+                title = obj.get("attributes", {}).get("title")
+                if not title:
+                    continue
+                fields_resp = client.get(
+                    f"{self.dashboards_url}/api/index_patterns/_fields_for_wildcard",
+                    headers=headers,
+                    params=[("pattern", title)]
+                    + [("meta_fields", m) for m in meta_fields],
+                )
+                fields_resp.raise_for_status()
+                fields = fields_resp.json().get("fields", [])
+                put = client.put(
+                    f"{self.dashboards_url}/api/saved_objects/index-pattern/{oid}",
+                    headers=headers,
+                    json={"attributes": {"fields": json.dumps(fields)}},
+                )
+                put.raise_for_status()
+                logger.info(
+                    "Refreshed %d fields on '%s' in tenant=%s",
+                    len(fields),
+                    title,
+                    tenant_name,
+                )
+                refreshed += 1
+        return refreshed
+
     def _set_tenant_settings(
         self, tenant_name: str, changes: dict[str, object]
     ) -> None:
