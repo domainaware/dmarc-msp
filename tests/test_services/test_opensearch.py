@@ -220,7 +220,12 @@ def test_update_internal_user_password_preserves_backend_roles():
     """Admin-set backend_roles must survive a password update."""
     svc, mock_client = _make_service()
     mock_client.transport.perform_request.side_effect = [
-        {"analyst1": {"attributes": {"role_type": "analyst"}, "backend_roles": ["br1"]}},
+        {
+            "analyst1": {
+                "attributes": {"role_type": "analyst"},
+                "backend_roles": ["br1"],
+            }
+        },
         None,  # PUT
     ]
     svc.update_internal_user_password("analyst1", "newpass")
