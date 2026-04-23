@@ -24,7 +24,19 @@ def test_lookup_script_does_not_pass_unknown_kwargs():
     """parsedmarc.utils.get_ip_address_info has no ``parallel`` kwarg;
     passing one silently failed every IP and produced zero enrichment."""
     assert "parallel" not in _PARSEDMARC_LOOKUP_SCRIPT
-    assert "offline=True" in _PARSEDMARC_LOOKUP_SCRIPT
+
+
+def test_lookup_script_runs_online_with_preloaded_map():
+    """offline=True short-circuits the PTR lookup, which in turn skips the
+    reverse-DNS-map lookup entirely — so name/type/reverse_dns/base_domain
+    always come back None and the migration silently no-ops those fields.
+    The script must run online AND preload the reverse-DNS map once per batch
+    (otherwise get_service_from_reverse_dns_base_domain re-downloads the map
+    from GitHub for every IP)."""
+    assert "offline=False" in _PARSEDMARC_LOOKUP_SCRIPT
+    assert "offline=True" not in _PARSEDMARC_LOOKUP_SCRIPT
+    assert "load_reverse_dns_map" in _PARSEDMARC_LOOKUP_SCRIPT
+    assert "reverse_dns_map=reverse_dns_map" in _PARSEDMARC_LOOKUP_SCRIPT
 
 
 def test_lookup_script_does_not_swallow_exceptions():

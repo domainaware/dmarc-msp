@@ -5,11 +5,12 @@ These commands exist to repair data written by older parsedmarc versions:
 * ``rename_asn_fields`` — the old ``source_asn_name`` / ``source_asn_domain``
   fields were renamed upstream to ``source_as_name`` / ``source_as_domain``.
   Existing documents still use the old names.
-* ``refill_enrichment_fields`` — parsedmarc's IP-based enrichment has improved
-  (GeoIP swap ipdb → ipinfo, better source-name/type classification). Old
-  documents carry stale values. We call ``parsedmarc.utils.get_ip_address_info``
-  inside the parsedmarc container so old docs get the exact same enrichment
-  new docs get.
+* ``refill_enrichment_fields`` — parsedmarc's IP-based enrichment evolves over
+  time (GeoIP data updates, new entries in the reverse-DNS map used for
+  source-name/type classification). Old documents carry stale values. We call
+  ``parsedmarc.utils.get_ip_address_info`` inside the parsedmarc container
+  (with the live PTR lookup and reverse-DNS map enabled) so old docs get the
+  same enrichment new docs get.
 
 ``DashboardService.refresh_index_pattern_fields`` handles the third piece
 (refreshing the cached field list inside each tenant's index-pattern saved
@@ -86,20 +87,35 @@ if (!changed) { ctx.op = 'noop'; }
 """.strip()
 
 # Script run inside the parsedmarc container. Reads a JSON list of IPs from
-# stdin and writes a JSON dict {ip: info_dict} to stdout. offline=True skips
-# DNS/WHOIS so we only hit the local GeoIP DB and name/type classifier.
+# stdin and writes a JSON dict {ip: info_dict} to stdout.
 #
-# No per-IP try/except: with offline=True, get_ip_address_info returns a dict
-# with None values for misses rather than raising — the only exceptions that
-# can fire here are programming errors (bad kwargs, missing imports) that we
-# want to see loudly, not mask as {ip: None}. Let the subprocess fail and
-# surface its stderr via the CalledProcessError handler in _lookup_enrichment.
+# offline=False is required: with offline=True, parsedmarc short-circuits the
+# PTR lookup (reverse_dns = None), which in turn skips the reverse-DNS-map
+# lookup entirely (the map is only consulted after a successful PTR). That
+# means name/type/reverse_dns/base_domain always come back None and the
+# migration silently no-ops those fields, which defeats the whole purpose of
+# the command. Running online matches what parsedmarc itself does at ingest.
+#
+# The reverse-DNS map is loaded once per batch and passed by reference to every
+# call. Without this, get_service_from_reverse_dns_base_domain would re-fetch
+# the map from GitHub on every IP.
+#
+# No per-IP try/except: exceptions here are programming errors (bad kwargs,
+# missing imports) that we want to see loudly, not mask as {ip: None}. Let the
+# subprocess fail and surface its stderr via the CalledProcessError handler in
+# _lookup_enrichment.
 _PARSEDMARC_LOOKUP_SCRIPT = r"""
 import json, sys
-from parsedmarc.utils import get_ip_address_info
+from parsedmarc.utils import get_ip_address_info, load_reverse_dns_map
+
+reverse_dns_map = {}
+load_reverse_dns_map(reverse_dns_map)
 
 ips = json.load(sys.stdin)
-out = {ip: get_ip_address_info(ip, offline=True) for ip in ips}
+out = {
+    ip: get_ip_address_info(ip, offline=False, reverse_dns_map=reverse_dns_map)
+    for ip in ips
+}
 json.dump(out, sys.stdout)
 """
 
