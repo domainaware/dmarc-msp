@@ -12,6 +12,13 @@
   index-pattern field list after the rename, so Discover stops warning that
   `source_as_name` / `source_as_domain` have no cached mapping. Pass
   `--skip-refresh` to opt out.
+- `dmarcmsp migrate refill-enrichment` silently produced zero updates on
+  every run. The in-container lookup helper passed `parallel=False` to
+  `parsedmarc.utils.get_ip_address_info`, which has no such kwarg, so every
+  IP raised `TypeError` and returned `None`. Removed the bad kwarg.
+  Lookup-helper stderr is now logged at warning level, and the service
+  raises loudly if every IP in a chunk fails instead of continuing to an
+  empty patch.
 
 ## 0.6.1 2026-04-23
 
