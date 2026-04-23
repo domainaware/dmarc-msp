@@ -298,7 +298,27 @@ class DashboardService:
             response.raise_for_status()
             result = response.json()
 
+        # Count imported objects for visibility — OSD's _import returns
+        # success=true even when individual objects were skipped or failed,
+        # so "the call didn't raise" is not the same as "every object landed".
+        expected = sum(1 for line in ndjson.split("\n") if line.strip())
+        success_count = result.get("successCount", 0)
+        errors = result.get("errors", [])
+        logger.info(
+            "Imported %d/%d saved objects into tenant=%s (errors: %d)",
+            success_count,
+            expected,
+            tenant_name,
+            len(errors),
+        )
+        if errors:
+            # Surface per-object errors even when success=true: OSD counts
+            # conflicts/skips here without flipping the top-level flag.
+            logger.warning(
+                "Saved-object import had %d per-object issue(s) in tenant=%s: %s",
+                len(errors),
+                tenant_name,
+                errors,
+            )
         if not result.get("success", False):
-            errors = result.get("errors", [])
-            logger.error("Dashboard import errors: %s", errors)
             raise RuntimeError(f"Dashboard import failed: {errors}")
