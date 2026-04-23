@@ -86,21 +86,20 @@ if (!changed) { ctx.op = 'noop'; }
 """.strip()
 
 # Script run inside the parsedmarc container. Reads a JSON list of IPs from
-# stdin and writes a JSON dict {ip: info_dict_or_null} to stdout. offline=True
-# skips DNS/WHOIS so we only hit the local GeoIP DB and name/type classifier.
+# stdin and writes a JSON dict {ip: info_dict} to stdout. offline=True skips
+# DNS/WHOIS so we only hit the local GeoIP DB and name/type classifier.
+#
+# No per-IP try/except: with offline=True, get_ip_address_info returns a dict
+# with None values for misses rather than raising — the only exceptions that
+# can fire here are programming errors (bad kwargs, missing imports) that we
+# want to see loudly, not mask as {ip: None}. Let the subprocess fail and
+# surface its stderr via the CalledProcessError handler in _lookup_enrichment.
 _PARSEDMARC_LOOKUP_SCRIPT = r"""
 import json, sys
 from parsedmarc.utils import get_ip_address_info
 
 ips = json.load(sys.stdin)
-out = {}
-for ip in ips:
-    try:
-        info = get_ip_address_info(ip, offline=True)
-        out[ip] = info
-    except Exception as exc:
-        out[ip] = None
-        print(f"lookup-failed {ip}: {exc}", file=sys.stderr)
+out = {ip: get_ip_address_info(ip, offline=True) for ip in ips}
 json.dump(out, sys.stdout)
 """
 
@@ -224,8 +223,6 @@ class MigrationService:
             chunk = ips[start : start + lookup_batch]
             results = self._lookup_enrichment(chunk)
             for ip, info in results.items():
-                if not info:
-                    continue
                 patch = {}
                 for doc_field in fields:
                     pm_key = FIELD_TO_PARSEDMARC_KEY[doc_field]
@@ -324,9 +321,10 @@ class MigrationService:
                 break
         return ips
 
-    def _lookup_enrichment(self, ips: list[str]) -> dict[str, dict | None]:
+    def _lookup_enrichment(self, ips: list[str]) -> dict[str, dict]:
         """Run the parsedmarc geoip helper inside the parsedmarc container
-        and return {ip: info_dict_or_None}."""
+        and return {ip: info_dict}. A broken helper raises — we do not mask
+        errors into missing results."""
         try:
             proc = subprocess.run(
                 [
@@ -356,21 +354,12 @@ class MigrationService:
         if proc.stderr.strip():
             logger.warning("parsedmarc lookup stderr: %s", proc.stderr.strip())
         try:
-            results = json.loads(proc.stdout)
+            return json.loads(proc.stdout)
         except json.JSONDecodeError as e:
             raise RuntimeError(
                 f"Could not parse parsedmarc lookup output: {e}\n"
                 f"stdout: {proc.stdout[:500]}"
             ) from e
-        if ips and all(v is None for v in results.values()):
-            first_err = proc.stderr.strip().splitlines()[:1]
-            hint = first_err[0] if first_err else "no stderr from parsedmarc"
-            raise RuntimeError(
-                "parsedmarc enrichment lookup returned no results for any of "
-                f"{len(ips)} IP(s). This usually means the lookup helper raised "
-                f"inside the parsedmarc container. First error: {hint}"
-            )
-        return results
 
     def _apply_enrichment_patch(
         self,
