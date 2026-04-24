@@ -687,34 +687,6 @@ To prevent this, always create the file before starting the stack (included in t
 touch domain_map.yaml
 ```
 
-### How can I review mailbox messages in the maildir created by postfix?
-
-After parsedmarc processes emails, it moves them out of the inbox into Maildir archive subfolders. Messages won't be in `Maildir/new/` or `Maildir/cur/` — they'll be in `.Archive.Aggregate/`, `.Archive.Invalid/`, or `.Archive.Forensic/` under the Maildir root.
-
-List archive folders and their contents:
-
-```bash
-docker exec parsedmarc-postfix ls /var/mail/dmarc/Maildir/
-docker exec parsedmarc-postfix ls /var/mail/dmarc/Maildir/.Archive/.Aggregate
-docker exec parsedmarc-postfix ls /var/mail/dmarc/Maildir/.Archive/.Invalid
-```
-
-Maildir filenames are opaque UIDs (e.g., `1774608212.V804I104b6eM192009.cc5e98fd3de3`), so use `grep` to search by content:
-
-```bash
-# Find messages from a specific sender
-docker exec parsedmarc-postfix grep -rl "noreply-dmarc-support@google.com" /var/mail/dmarc/Maildir
-
-# Find messages mentioning a domain
-docker exec parsedmarc-postfix grep -rl "example.com" /var/mail/dmarc/Maildir
-```
-
-View a specific message:
-
-```bash
-docker exec parsedmarc-postfix cat /var/mail/dmarc/Maildir//.Archive.Aggregate/cur/<filename>
-```
-
 ### I don't want to expose SMTP, can I use the Gmail or Microsoft Graph API instead?
 
 Yes. You can modify the docker-compose file to do that. Just remove the `postfix` service, then configure the parsedmarc service [environment variables](https://domainaware.github.io/parsedmarc/usage.html#environment-variable-configuration) to use parsedmarc's built-in support for Microsoft Graph or the Google APIs. Removing `postfix` also eliminates the need to open port 25/587 on the host and removes the cert dependency that blocks Postfix from starting, so it pairs naturally with the [DNS-01](#can-i-use-a-dns-01-challenge-instead-of-http-01-so-i-dont-need-to-expose-port-80) and [BYO-certificate](#can-i-run-without-lets-encrypt-or-with-my-own-certificate) alternatives below.
@@ -753,6 +725,34 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
 ```
 
 Dashboards exposes port 5601, OpenSearch exposes 9200, and Postfix listens on 2525 — point your upstream at those. You'll want to replicate the login rate-limiting nginx provides at your perimeter, and the dev override disables OpenSearch's security plugin for local testing, so review `docker-compose.dev.yml` before using it in a real deployment.
+
+### How can I review mailbox messages in the maildir created by postfix?
+
+After parsedmarc processes emails, it moves them out of the inbox into Maildir archive subfolders. Messages won't be in `Maildir/new/` or `Maildir/cur/` — they'll be in `.Archive.Aggregate/`, `.Archive.Invalid/`, or `.Archive.Forensic/` under the Maildir root.
+
+List archive folders and their contents:
+
+```bash
+docker exec parsedmarc-postfix ls /var/mail/dmarc/Maildir/
+docker exec parsedmarc-postfix ls /var/mail/dmarc/Maildir/.Archive/.Aggregate
+docker exec parsedmarc-postfix ls /var/mail/dmarc/Maildir/.Archive/.Invalid
+```
+
+Maildir filenames are opaque UIDs (e.g., `1774608212.V804I104b6eM192009.cc5e98fd3de3`), so use `grep` to search by content:
+
+```bash
+# Find messages from a specific sender
+docker exec parsedmarc-postfix grep -rl "noreply-dmarc-support@google.com" /var/mail/dmarc/Maildir
+
+# Find messages mentioning a domain
+docker exec parsedmarc-postfix grep -rl "example.com" /var/mail/dmarc/Maildir
+```
+
+View a specific message:
+
+```bash
+docker exec parsedmarc-postfix cat /var/mail/dmarc/Maildir//.Archive.Aggregate/cur/<filename>
+```
 
 ### Handling DMARC authorization DNS records is a pain. Can this project handle them at scale?
 
