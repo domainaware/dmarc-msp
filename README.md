@@ -695,7 +695,7 @@ Yes. You can modify the docker-compose file to do that. Just remove the `postfix
 
 Yes, but it isn't wired up out of the box. DNS-01 keeps certbot and Let's Encrypt but verifies ownership by writing a TXT record to your DNS zone instead of serving a file on port 80 — the right choice when the host sits behind a corporate firewall and port 80 isn't reachable, but you still want a publicly-trusted Let's Encrypt cert.
 
-To switch, swap the `certbot/certbot` image for a DNS-plugin variant (`certbot/dns-cloudflare`, `certbot/dns-route53`, `certbot/dns-google`, `certbot/dns-azure`, etc.), adapt [deploy/certbot/entrypoint.sh](deploy/certbot/entrypoint.sh) to call `--dns-<provider>` with the credential file path instead of `--webroot`, and pass the credentials into the container. The rest of the stack (nginx cert detection, Postfix STARTTLS reload, renewal loop) works unchanged once the certs land in the shared `certs` volume.
+To switch, swap the `certbot/certbot` image for [one of the DNS-plugin variants](https://hub.docker.com/u/certbot) (`certbot/dns-cloudflare`, `certbot/dns-route53`, `certbot/dns-google`, `certbot/dns-azure`, etc.), adapt [deploy/certbot/entrypoint.sh](deploy/certbot/entrypoint.sh) to call `--dns-<provider>` with the credential file path instead of `--webroot` (see certbot's [DNS plugin documentation](https://eff-certbot.readthedocs.io/en/stable/using.html#dns-plugins) for per-provider credential formats), and pass the credentials into the container. The rest of the stack (nginx cert detection, Postfix STARTTLS reload, renewal loop) works unchanged once the certs land in the shared `certs` volume.
 
 ### Can I run without Let's Encrypt, or with my own certificate?
 
