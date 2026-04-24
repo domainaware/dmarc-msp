@@ -719,9 +719,15 @@ docker exec parsedmarc-postfix cat /var/mail/dmarc/Maildir//.Archive.Aggregate/c
 
 Yes. You can modify the docker-compose file to do that. Just remove the `postfix` service, then configure the parsedmarc service [environment variables](https://domainaware.github.io/parsedmarc/usage.html#environment-variable-configuration) to use parsedmarc's built-in support for Microsoft Graph or the Google APIs. Removing `postfix` also eliminates the need to open port 25/587 on the host and removes the cert dependency that blocks Postfix from starting, so it pairs naturally with the TLS alternatives below.
 
+### Can I use a DNS-01 challenge instead of HTTP-01 so I don't need to expose port 80?
+
+Yes, but it isn't wired up out of the box. DNS-01 keeps certbot and Let's Encrypt but verifies ownership by writing a TXT record to your DNS zone instead of serving a file on port 80 — the right choice when the host sits behind a corporate firewall or anti-spam gateway and port 80 isn't reachable, but you still want a publicly-trusted Let's Encrypt cert.
+
+To switch, swap the `certbot/certbot` image for a DNS-plugin variant (`certbot/dns-cloudflare`, `certbot/dns-route53`, `certbot/dns-google`, `certbot/dns-azure`, etc.), adapt [deploy/certbot/entrypoint.sh](deploy/certbot/entrypoint.sh) to call `--dns-<provider>` with the credential file path instead of `--webroot`, and pass the credentials into the container. The rest of the stack (nginx cert detection, Postfix STARTTLS reload, renewal loop) works unchanged once the certs land in the shared `certs` volume.
+
 ### Can I run without Let's Encrypt, or with my own certificate?
 
-Yes. The default stack uses certbot with an HTTP-01 challenge, which requires port 80 reachable from the public internet. That's not always the right fit — hosts behind a corporate perimeter, air-gapped labs, or organizations that already issue certs from an internal CA or a managed certificate lifecycle platform. The shipping `docker-compose.yml` supports several alternatives via a `docker-compose.override.yml` (Compose merges it automatically on `docker compose up`). Issue [#3](https://github.com/domainaware/dmarc-msp/issues/3) has the background on these scenarios.
+Yes. For hosts behind a corporate perimeter, air-gapped labs, or organizations that already issue certs from an internal CA or a managed certificate lifecycle platform, the shipping `docker-compose.yml` supports swapping out certbot entirely via a `docker-compose.override.yml` (Compose merges it automatically on `docker compose up`). If you do want a Let's Encrypt cert but can't expose port 80, see the DNS-01 FAQ above instead. Issue [#3](https://github.com/domainaware/dmarc-msp/issues/3) has the background on these scenarios.
 
 **Bring your own certificate.** Disable certbot and mount your cert/key at the paths nginx and Postfix expect:
 
@@ -747,8 +753,6 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
 ```
 
 Dashboards exposes port 5601, OpenSearch exposes 9200, and Postfix listens on 2525 — point your upstream at those. You'll want to replicate the login rate-limiting nginx provides at your perimeter, and the dev override disables OpenSearch's security plugin for local testing, so review `docker-compose.dev.yml` before using it in a real deployment.
-
-**DNS-01 challenge instead of HTTP-01.** If you want a publicly-trusted Let's Encrypt cert without opening port 80 (for example, an anti-spam gateway fronts SMTP and the host is otherwise firewalled), swap the `certbot/certbot` image for a DNS-plugin variant (`certbot/dns-cloudflare`, `certbot/dns-route53`, `certbot/dns-google`, `certbot/dns-azure`, etc.), adapt [deploy/certbot/entrypoint.sh](deploy/certbot/entrypoint.sh) to call `--dns-<provider>` with the credential file path instead of `--webroot`, and pass the credentials into the container. This isn't wired up out of the box, but the rest of the stack (nginx cert detection, Postfix STARTTLS reload, renewal loop) works unchanged once the certs land in the shared `certs` volume.
 
 ### Handling DMARC authorization DNS records is a pain. Can this project handle them at scale?
 
