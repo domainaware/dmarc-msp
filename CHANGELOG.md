@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.6.5 2026-04-23
+
+### Fixed
+
+- `dmarcmsp migrate refill-enrichment` now also backfills `source_asn`.
+  The field map only listed `source_as_name` and `source_as_domain`, so
+  docs ingested before the parsedmarc upgrade that started writing
+  `source_asn` never got the ASN value filled in. Symptom: the new
+  "Message sources by Autonomous System" visualization only showed
+  recent events — its three bucket aggregations (`source_asn`,
+  `source_as_name`, `source_as_domain`) all have `missingBucket=false`,
+  so any doc missing even one of the three was excluded. Re-run
+  `dmarcmsp migrate refill-enrichment` (or `migrate all`) to populate
+  the field on historical docs.
+
+### Changed
+
+- `dmarcmsp dashboard import` / `import-all` (with or without
+  `--replace`) now auto-refresh each tenant's index-pattern field caches
+  against the live OpenSearch mapping at the end of the import. The
+  template's baked-in `attributes.fields` list goes stale whenever
+  parsedmarc adds or renames fields, and OSD never refreshes it on its
+  own — without this, visualizations referencing new fields
+  (`source_asn`, etc.) rendered with "no cached mapping" errors until
+  the operator chased the import with a separate
+  `migrate refresh-index-fields`.
+
 ## 0.6.4 2026-04-23
 
 ### Added

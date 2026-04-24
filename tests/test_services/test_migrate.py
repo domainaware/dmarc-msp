@@ -9,7 +9,11 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from dmarc_msp.config import OpenSearchConfig
-from dmarc_msp.services.migrate import _PARSEDMARC_LOOKUP_SCRIPT, MigrationService
+from dmarc_msp.services.migrate import (
+    _PARSEDMARC_LOOKUP_SCRIPT,
+    FIELD_TO_PARSEDMARC_KEY,
+    MigrationService,
+)
 
 
 def _make_service() -> MigrationService:
@@ -37,6 +41,18 @@ def test_lookup_script_runs_online_with_preloaded_map():
     assert "offline=True" not in _PARSEDMARC_LOOKUP_SCRIPT
     assert "load_reverse_dns_map" in _PARSEDMARC_LOOKUP_SCRIPT
     assert "reverse_dns_map=reverse_dns_map" in _PARSEDMARC_LOOKUP_SCRIPT
+
+
+def test_field_map_backfills_source_asn():
+    """The "Message sources by Autonomous System" viz buckets on
+    source_asn, source_as_name, and source_as_domain with
+    missingBucket=false, so any doc missing even one of those fields is
+    dropped from the result. Older docs (pre-parsedmarc-upgrade) lack
+    these fields until the refill migration backfills them — so the map
+    must include source_asn alongside the two as_* fields."""
+    assert FIELD_TO_PARSEDMARC_KEY.get("source_asn") == "asn"
+    assert FIELD_TO_PARSEDMARC_KEY.get("source_as_name") == "as_name"
+    assert FIELD_TO_PARSEDMARC_KEY.get("source_as_domain") == "as_domain"
 
 
 def test_lookup_script_does_not_swallow_exceptions():
