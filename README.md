@@ -319,7 +319,8 @@ The stack automatically detects the `mta-sts` subdomain and handles TLS for it â
    ```text
    version: STSv1
    mode: enforce
-   mx: <your-domain>
+   mx: mx1.example.com
+   mx: mx2.example.com
    max_age: 86400
    ```
 
