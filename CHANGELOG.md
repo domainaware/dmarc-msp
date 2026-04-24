@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.6.4 2026-04-23
+
+### Added
+
+- `dmarcmsp dashboard import` and `import-all` now accept `--replace`,
+  which deletes every template saved object from the tenant by (type, id)
+  before running the import. Useful when OSD's `_import?overwrite=true`
+  silently skips updates — e.g. a pre-existing dashboard that won't pick
+  up a newly added panel — and as a way to force a clean re-sync. Only
+  IDs present in the template are touched; user-created saved objects in
+  the tenant are left alone.
+
+### Fixed
+
+- `DashboardService._import_saved_objects` now logs per-object import
+  errors and a `successCount` vs. expected-count line on every run. OSD's
+  `_import` API returns top-level `success: true` even when individual
+  objects were skipped (version conflicts, broken refs, etc.), so the
+  caller never saw those failures. Surfaces the same class of problem
+  that masked the "Message sources by Autonomous System" visualization
+  silently not landing in existing tenants.
+
 ## 0.6.3 2026-04-23
 
 ### Fixed
