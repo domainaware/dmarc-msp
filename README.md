@@ -51,7 +51,7 @@ The entire stack deploys via a single `docker compose up`: SMTP ingestion, parse
 - Docker and Docker Compose
 - A domain for receiving DMARC reports (e.g., `dmarc.msp-example.com`)
 - DNS provider API credentials (Cloudflare, Route 53, GCP, or Azure)
-- Port 80 open (for Let's Encrypt HTTP-01 challenge — see the FAQ if you can't expose port 80, already have a certificate, or terminate TLS upstream)
+- Port 80 open (for the Let's Encrypt HTTP-01 challenge — or see the FAQ on [DNS-01](#can-i-use-a-dns-01-challenge-instead-of-http-01-so-i-dont-need-to-expose-port-80) or [running without Let's Encrypt](#can-i-run-without-lets-encrypt-or-with-my-own-certificate) for alternatives)
 
 ### 1. Clone and configure
 
@@ -717,7 +717,7 @@ docker exec parsedmarc-postfix cat /var/mail/dmarc/Maildir//.Archive.Aggregate/c
 
 ### I don't want to expose SMTP, can I use the Gmail or Microsoft Graph API instead?
 
-Yes. You can modify the docker-compose file to do that. Just remove the `postfix` service, then configure the parsedmarc service [environment variables](https://domainaware.github.io/parsedmarc/usage.html#environment-variable-configuration) to use parsedmarc's built-in support for Microsoft Graph or the Google APIs. Removing `postfix` also eliminates the need to open port 25/587 on the host and removes the cert dependency that blocks Postfix from starting, so it pairs naturally with the TLS alternatives below.
+Yes. You can modify the docker-compose file to do that. Just remove the `postfix` service, then configure the parsedmarc service [environment variables](https://domainaware.github.io/parsedmarc/usage.html#environment-variable-configuration) to use parsedmarc's built-in support for Microsoft Graph or the Google APIs. Removing `postfix` also eliminates the need to open port 25/587 on the host and removes the cert dependency that blocks Postfix from starting, so it pairs naturally with the [DNS-01](#can-i-use-a-dns-01-challenge-instead-of-http-01-so-i-dont-need-to-expose-port-80) and [BYO-certificate](#can-i-run-without-lets-encrypt-or-with-my-own-certificate) alternatives below.
 
 ### Can I use a DNS-01 challenge instead of HTTP-01 so I don't need to expose port 80?
 
@@ -727,7 +727,7 @@ To switch, swap the `certbot/certbot` image for a DNS-plugin variant (`certbot/d
 
 ### Can I run without Let's Encrypt, or with my own certificate?
 
-Yes. For hosts behind a corporate perimeter, air-gapped labs, or organizations that already issue certs from an internal CA or a managed certificate lifecycle platform, the shipping `docker-compose.yml` supports swapping out certbot entirely via a `docker-compose.override.yml` (Compose merges it automatically on `docker compose up`). If you do want a Let's Encrypt cert but can't expose port 80, see the DNS-01 FAQ above instead. Issue [#3](https://github.com/domainaware/dmarc-msp/issues/3) has the background on these scenarios.
+Yes. For hosts behind a corporate perimeter, air-gapped labs, or organizations that already issue certs from an internal CA or a managed certificate lifecycle platform, the shipping `docker-compose.yml` supports swapping out certbot entirely via a `docker-compose.override.yml` (Compose merges it automatically on `docker compose up`). If you do want a Let's Encrypt cert but can't expose port 80, see the [DNS-01 FAQ above](#can-i-use-a-dns-01-challenge-instead-of-http-01-so-i-dont-need-to-expose-port-80) instead. Issue [#3](https://github.com/domainaware/dmarc-msp/issues/3) has the background on these scenarios.
 
 **Bring your own certificate.** Disable certbot and mount your cert/key at the paths nginx and Postfix expect:
 
