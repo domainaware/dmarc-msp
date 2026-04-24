@@ -695,24 +695,24 @@ List archive folders and their contents:
 
 ```bash
 docker exec parsedmarc-postfix ls /var/mail/dmarc/Maildir/
-docker exec parsedmarc-postfix ls /var/mail/dmarc/Maildir/.Archive.Aggregate/cur/
-docker exec parsedmarc-postfix ls /var/mail/dmarc/Maildir/.Archive.Invalid/cur/
+docker exec parsedmarc-postfix ls /var/mail/dmarc/Maildir/.Archive/.Aggregate
+docker exec parsedmarc-postfix ls /var/mail/dmarc/Maildir/.Archive/.Invalid
 ```
 
 Maildir filenames are opaque UIDs (e.g., `1774608212.V804I104b6eM192009.cc5e98fd3de3`), so use `grep` to search by content:
 
 ```bash
 # Find messages from a specific sender
-docker exec parsedmarc-postfix grep -rl "noreply-dmarc-support@google.com" /var/mail/dmarc/Maildir/
+docker exec parsedmarc-postfix grep -rl "noreply-dmarc-support@google.com" /var/mail/dmarc/Maildir
 
 # Find messages mentioning a domain
-docker exec parsedmarc-postfix grep -rl "example.com" /var/mail/dmarc/Maildir/.Archive.Aggregate/cur/
+docker exec parsedmarc-postfix grep -rl "example.com" /var/mail/dmarc/Maildir
 ```
 
 View a specific message:
 
 ```bash
-docker exec parsedmarc-postfix cat /var/mail/dmarc/Maildir/.Archive.Aggregate/cur/<filename>
+docker exec parsedmarc-postfix cat /var/mail/dmarc/Maildir//.Archive.Aggregate/cur/<filename>
 ```
 
 ### I don't want to expose SMTP, can I use the Gmail or Microsoft Graph API instead?
