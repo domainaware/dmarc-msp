@@ -693,7 +693,7 @@ Yes. You can modify the docker-compose file to do that. Just remove the `postfix
 
 ### Can I use a DNS-01 challenge instead of HTTP-01 so I don't need to expose port 80?
 
-Yes, but it isn't wired up out of the box. DNS-01 keeps certbot and Let's Encrypt but verifies ownership by writing a TXT record to your DNS zone instead of serving a file on port 80 — the right choice when the host sits behind a corporate firewall or anti-spam gateway and port 80 isn't reachable, but you still want a publicly-trusted Let's Encrypt cert.
+Yes, but it isn't wired up out of the box. DNS-01 keeps certbot and Let's Encrypt but verifies ownership by writing a TXT record to your DNS zone instead of serving a file on port 80 — the right choice when the host sits behind a corporate firewall and port 80 isn't reachable, but you still want a publicly-trusted Let's Encrypt cert.
 
 To switch, swap the `certbot/certbot` image for a DNS-plugin variant (`certbot/dns-cloudflare`, `certbot/dns-route53`, `certbot/dns-google`, `certbot/dns-azure`, etc.), adapt [deploy/certbot/entrypoint.sh](deploy/certbot/entrypoint.sh) to call `--dns-<provider>` with the credential file path instead of `--webroot`, and pass the credentials into the container. The rest of the stack (nginx cert detection, Postfix STARTTLS reload, renewal loop) works unchanged once the certs land in the shared `certs` volume.
 
