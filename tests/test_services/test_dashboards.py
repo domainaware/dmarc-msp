@@ -347,11 +347,13 @@ def test_import_for_client_replace_deletes_all_template_ids(tmp_path):
         assert any("dashboard/dash-id" in u for u in deleted_urls)
 
 
-def test_import_for_client_replace_refreshes_index_pattern_fields(tmp_path):
-    """--replace wipes the refreshed attributes.fields on each index-pattern
-    by recreating it from the template. To avoid forcing the operator to
-    chase with ``migrate refresh-index-fields`` afterward, the replace
-    path re-runs the field refresh automatically."""
+@pytest.mark.parametrize("replace", [True, False])
+def test_import_for_client_refreshes_index_pattern_fields(tmp_path, replace):
+    """Every import — plain or ``replace=True`` — re-runs the index-pattern
+    field refresh. The template's baked-in ``attributes.fields`` list goes
+    stale whenever parsedmarc adds or renames fields, and OSD never
+    auto-refreshes, so leaving this to the operator means visualizations
+    silently break on freshly-imported tenants."""
     lines = [
         json.dumps(
             {
@@ -400,47 +402,13 @@ def test_import_for_client_replace_refreshes_index_pattern_fields(tmp_path):
         mock_client.put.return_value = put_response
         mock_client_cls.return_value = mock_client
 
-        svc.import_for_client("acme_tenant", "acme_corp", replace=True)
+        svc.import_for_client("acme_tenant", "acme_corp", replace=replace)
 
         # The index-pattern's attributes.fields is PUT back with the live
         # mapping — that's how refresh_index_pattern_fields writes its
         # result.
         put_urls = [call.args[0] for call in mock_client.put.call_args_list]
         assert any("index-pattern/agg-id" in u for u in put_urls)
-
-
-def test_import_for_client_no_replace_skips_refresh(tmp_path):
-    """Non-replace import leaves the existing fields list alone — the
-    auto-refresh is tied to ``replace=True`` so we don't pay its per-
-    tenant cost on the common path."""
-    lines = [
-        json.dumps(
-            {
-                "type": "index-pattern",
-                "id": "agg-id",
-                "attributes": {"title": "dmarc_aggregate*"},
-                "references": [],
-            }
-        ),
-    ]
-    svc = _make_template(tmp_path, lines)
-
-    mock_response = MagicMock()
-    mock_response.json.return_value = {"success": True}
-    mock_response.raise_for_status = MagicMock()
-
-    with patch("dmarc_msp.services.dashboards.httpx.Client") as mock_client_cls:
-        mock_client = MagicMock()
-        mock_client.__enter__ = MagicMock(return_value=mock_client)
-        mock_client.__exit__ = MagicMock(return_value=False)
-        mock_client.post.return_value = mock_response
-        mock_client_cls.return_value = mock_client
-
-        svc.import_for_client("acme_tenant", "acme_corp")  # replace=False
-
-        # No PUTs against index-pattern saved objects (that's what
-        # refresh_index_pattern_fields would issue).
-        assert mock_client.put.call_count == 0
 
 
 def test_import_for_client_no_replace_does_not_delete_template(tmp_path):

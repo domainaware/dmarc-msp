@@ -69,15 +69,16 @@ class DashboardService:
             settings["theme:darkMode"] = True
         if settings:
             self._set_tenant_settings(tenant_name, settings)
-        if replace:
-            # --replace recreates index-patterns from the NDJSON, which
-            # means their attributes.fields cache is reset to whatever was
-            # baked into the template and any prior refresh-index-fields
-            # work is lost. Re-refresh against the live mapping so fields
-            # added by parsedmarc upgrades (source_asn, etc.) are visible
-            # without the operator having to follow up with a second
-            # command.
-            self.refresh_index_pattern_fields(tenant_name)
+        # Always refresh the index-pattern field caches against the live
+        # mapping. The NDJSON ships with a baked-in attributes.fields list
+        # that goes stale whenever parsedmarc adds/renames fields, and OSD
+        # never auto-refreshes — visualizations then render with "no cached
+        # mapping" errors for any new field. --replace makes this even more
+        # likely (it resets attributes.fields to the template's version),
+        # but plain imports can also inherit a stale list. Running the
+        # refresh unconditionally means the operator never has to chase an
+        # import with a separate `migrate refresh-index-fields`.
+        self.refresh_index_pattern_fields(tenant_name)
         logger.info(
             "Imported dashboards for tenant=%s prefix=%s", tenant_name, index_prefix
         )
