@@ -42,6 +42,7 @@ FIELD_TO_PARSEDMARC_KEY: dict[str, str] = {
     "source_country": "country",
     "source_name": "name",
     "source_type": "type",
+    "source_asn": "asn",
     "source_as_name": "as_name",
     "source_as_domain": "as_domain",
 }
