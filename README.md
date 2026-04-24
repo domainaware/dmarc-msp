@@ -51,7 +51,7 @@ The entire stack deploys via a single `docker compose up`: SMTP ingestion, parse
 - Docker and Docker Compose
 - A domain for receiving DMARC reports (e.g., `dmarc.msp-example.com`)
 - DNS provider API credentials (Cloudflare, Route 53, GCP, or Azure)
-- Port 80 open (for Let's Encrypt HTTP-01 challenge)
+- Port 80 open (for Let's Encrypt HTTP-01 challenge — see the FAQ if you can't expose port 80, already have a certificate, or terminate TLS upstream)
 
 ### 1. Clone and configure
 
@@ -717,7 +717,38 @@ docker exec parsedmarc-postfix cat /var/mail/dmarc/Maildir//.Archive.Aggregate/c
 
 ### I don't want to expose SMTP, can I use the Gmail or Microsoft Graph API instead?
 
-Yes. You can modify the docker-compose file to do that. Just remove the `postfix` service, then configure the parsedmarc service [environment variables](https://domainaware.github.io/parsedmarc/usage.html#environment-variable-configuration) to use parsedmarc's built-in support for Microsoft Graph or the Google APIs.
+Yes. You can modify the docker-compose file to do that. Just remove the `postfix` service, then configure the parsedmarc service [environment variables](https://domainaware.github.io/parsedmarc/usage.html#environment-variable-configuration) to use parsedmarc's built-in support for Microsoft Graph or the Google APIs. Removing `postfix` also eliminates the need to open port 25/587 on the host and removes the cert dependency that blocks Postfix from starting, so it pairs naturally with the TLS alternatives below.
+
+### Can I run without Let's Encrypt, or with my own certificate?
+
+Yes. The default stack uses certbot with an HTTP-01 challenge, which requires port 80 reachable from the public internet. That's not always the right fit — hosts behind a corporate perimeter, air-gapped labs, or organizations that already issue certs from an internal CA or a managed certificate lifecycle platform. The shipping `docker-compose.yml` supports several alternatives via a `docker-compose.override.yml` (Compose merges it automatically on `docker compose up`). Issue [#3](https://github.com/domainaware/dmarc-msp/issues/3) has the background on these scenarios.
+
+**Bring your own certificate.** Disable certbot and mount your cert/key at the paths nginx and Postfix expect:
+
+```yaml
+# docker-compose.override.yml
+services:
+  certbot:
+    profiles: ["disabled"]
+  postfix:
+    depends_on: !reset []   # drop the certbot healthcheck dependency
+  nginx:
+    volumes:
+      - /path/to/fullchain.pem:/etc/letsencrypt/live/${MSP_DOMAIN}/fullchain.pem:ro
+      - /path/to/privkey.pem:/etc/letsencrypt/live/${MSP_DOMAIN}/privkey.pem:ro
+```
+
+Substitute your actual `MSP_DOMAIN`. The nginx entrypoint auto-detects the cert and switches from HTTP-only to HTTPS. Rotate by replacing the files on disk and running `docker kill -s HUP parsedmarc-nginx parsedmarc-postfix`. Internal-CA, self-signed, and externally-managed certs all work this way.
+
+**Terminate TLS upstream.** If an upstream reverse proxy or load balancer already handles HTTPS, drop nginx and certbot entirely by reusing the dev override:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+```
+
+Dashboards exposes port 5601, OpenSearch exposes 9200, and Postfix listens on 2525 — point your upstream at those. You'll want to replicate the login rate-limiting nginx provides at your perimeter, and the dev override disables OpenSearch's security plugin for local testing, so review `docker-compose.dev.yml` before using it in a real deployment.
+
+**DNS-01 challenge instead of HTTP-01.** If you want a publicly-trusted Let's Encrypt cert without opening port 80 (for example, an anti-spam gateway fronts SMTP and the host is otherwise firewalled), swap the `certbot/certbot` image for a DNS-plugin variant (`certbot/dns-cloudflare`, `certbot/dns-route53`, `certbot/dns-google`, `certbot/dns-azure`, etc.), adapt [deploy/certbot/entrypoint.sh](deploy/certbot/entrypoint.sh) to call `--dns-<provider>` with the credential file path instead of `--webroot`, and pass the credentials into the container. This isn't wired up out of the box, but the rest of the stack (nginx cert detection, Postfix STARTTLS reload, renewal loop) works unchanged once the certs land in the shared `certs` volume.
 
 ### Handling DMARC authorization DNS records is a pain. Can this project handle them at scale?
 
