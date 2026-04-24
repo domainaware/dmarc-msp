@@ -2,6 +2,15 @@
 
 ## 0.6.5 2026-04-23
 
+### Added
+
+- Optional `IPINFO_API_TOKEN` env var (wired into parsedmarc as
+  `PARSEDMARC_GENERAL_IPINFO_API_TOKEN`) to use the IPinfo Lite REST
+  API for IP lookups instead of the bundled mmdb. Left unset by default;
+  parsedmarc treats the resulting empty-string value as "no token" and
+  falls back to the local database, so existing deployments are
+  unaffected.
+
 ### Fixed
 
 - `dmarcmsp migrate refill-enrichment` now also backfills `source_asn`.
