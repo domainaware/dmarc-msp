@@ -687,6 +687,10 @@ To prevent this, always create the file before starting the stack (included in t
 touch domain_map.yaml
 ```
 
+### Handling DMARC authorization DNS records is a pain. Can this project handle them at scale?
+
+Yes. Over 40 tests are DNS-related, covering bulk onboarding/offboarding at scale, DNS cleanup, consistency, interleaved operations, pre-existing records, and race conditions. A `cleanup-dns` command reconciles the DNS zone against the database to remove orphaned records. Keep in mind that this is still a beta project created with the help of AI and my own testing. Do your own testing before deploying in production.
+
 ### I don't want to expose SMTP, can I use the Gmail or Microsoft Graph API instead?
 
 Yes. You can modify the docker-compose file to do that. Just remove the `postfix` service, then configure the parsedmarc service [environment variables](https://domainaware.github.io/parsedmarc/usage.html#environment-variable-configuration) to use parsedmarc's built-in support for Microsoft Graph or the Google APIs. Removing `postfix` also eliminates the need to open port 25/587 on the host and removes the cert dependency that blocks Postfix from starting, so it pairs naturally with the [DNS-01](#can-i-use-a-dns-01-challenge-instead-of-http-01-so-i-dont-need-to-expose-port-80) and [BYO-certificate](#can-i-run-without-lets-encrypt-or-with-my-own-certificate) alternatives below.
@@ -753,10 +757,6 @@ View a specific message:
 ```bash
 docker exec parsedmarc-postfix cat /var/mail/dmarc/Maildir//.Archive.Aggregate/cur/<filename>
 ```
-
-### Handling DMARC authorization DNS records is a pain. Can this project handle them at scale?
-
-Yes. Over 40 tests are DNS-related, covering bulk onboarding/offboarding at scale, DNS cleanup, consistency, interleaved operations, pre-existing records, and race conditions. A `cleanup-dns` command reconciles the DNS zone against the database to remove orphaned records. Keep in mind that this is still a beta project created with the help of AI and my own testing. Do your own testing before deploying in production.
 
 ## License
 
