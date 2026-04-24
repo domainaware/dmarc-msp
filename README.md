@@ -51,7 +51,7 @@ The entire stack deploys via a single `docker compose up`: SMTP ingestion, parse
 - Docker and Docker Compose
 - A domain for receiving DMARC reports (e.g., `dmarc.msp-example.com`)
 - DNS provider API credentials (Cloudflare, Route 53, GCP, or Azure)
-- Port 80 open (for Let's Encrypt HTTP-01 challenge)
+- Port 80 open (for the Let's Encrypt HTTP-01 challenge — or see the FAQ on [DNS-01](#can-i-use-a-dns-01-challenge-instead-of-http-01-so-i-dont-need-to-expose-port-80) or [running without Let's Encrypt](#can-i-run-without-lets-encrypt-or-with-my-own-certificate) for alternatives)
 
 ### 1. Clone and configure
 
@@ -687,6 +687,49 @@ To prevent this, always create the file before starting the stack (included in t
 touch domain_map.yaml
 ```
 
+### Handling DMARC authorization DNS records is a pain. Can this project handle them at scale?
+
+Yes. Over 100 tests are DNS-related, covering bulk onboarding/offboarding at scale, DNS cleanup, consistency, interleaved operations, pre-existing records, and race conditions. A `cleanup-dns` command reconciles the DNS zone against the database to remove orphaned records. Keep in mind that this is still a beta project created with the help of AI and my own testing. Do your own testing before deploying in production.
+
+### I don't want to expose SMTP, can I use the Gmail or Microsoft Graph API instead?
+
+Yes. You can modify the docker-compose file to do that. Just remove the `postfix` service, then configure the parsedmarc service [environment variables](https://domainaware.github.io/parsedmarc/usage.html#environment-variable-configuration) to use parsedmarc's built-in support for Microsoft Graph or the Google APIs. Removing `postfix` also eliminates the need to open port 25/587 on the host and removes the cert dependency that blocks Postfix from starting, so it pairs naturally with the [DNS-01](#can-i-use-a-dns-01-challenge-instead-of-http-01-so-i-dont-need-to-expose-port-80) and [BYO-certificate](#can-i-run-without-lets-encrypt-or-with-my-own-certificate) alternatives below.
+
+### Can I use a DNS-01 challenge instead of HTTP-01 so I don't need to expose port 80?
+
+Yes, but it isn't wired up out of the box. [DNS-01](https://letsencrypt.org/docs/challenge-types/#dns-01-challenge) keeps certbot and Let's Encrypt but verifies ownership by writing a TXT record to your DNS zone instead of serving a file on port 80 — the right choice when the host sits behind a corporate firewall and port 80 isn't reachable, but you still want a publicly-trusted Let's Encrypt cert.
+
+To switch, swap the `certbot/certbot` image for [one of the DNS-plugin variants](https://hub.docker.com/u/certbot) (`certbot/dns-cloudflare`, `certbot/dns-route53`, `certbot/dns-google`, `certbot/dns-azure`, etc.), adapt [deploy/certbot/entrypoint.sh](deploy/certbot/entrypoint.sh) to call `--dns-<provider>` with the credential file path instead of `--webroot` (see certbot's [DNS plugin documentation](https://eff-certbot.readthedocs.io/en/stable/using.html#dns-plugins) for per-provider credential formats), and pass the credentials into the container. The rest of the stack (nginx cert detection, Postfix STARTTLS reload, renewal loop) works unchanged once the certs land in the shared `certs` volume.
+
+### Can I run without Let's Encrypt, or with my own certificate?
+
+Yes. For hosts behind a corporate perimeter, air-gapped labs, or organizations that already issue certs from an internal CA or a managed certificate lifecycle platform, the shipping `docker-compose.yml` supports swapping out certbot entirely via a `docker-compose.override.yml` (Compose merges it automatically on `docker compose up`). If you do want a Let's Encrypt cert but can't expose port 80, see the [DNS-01 FAQ above](#can-i-use-a-dns-01-challenge-instead-of-http-01-so-i-dont-need-to-expose-port-80) instead. Issue [#3](https://github.com/domainaware/dmarc-msp/issues/3) has the background on these scenarios.
+
+**Bring your own certificate.** Disable certbot and mount your cert/key at the paths nginx and Postfix expect:
+
+```yaml
+# docker-compose.override.yml
+services:
+  certbot:
+    profiles: ["disabled"]
+  postfix:
+    depends_on: !reset []   # drop the certbot healthcheck dependency
+  nginx:
+    volumes:
+      - /path/to/fullchain.pem:/etc/letsencrypt/live/${MSP_DOMAIN}/fullchain.pem:ro
+      - /path/to/privkey.pem:/etc/letsencrypt/live/${MSP_DOMAIN}/privkey.pem:ro
+```
+
+Substitute your actual `MSP_DOMAIN`. The nginx entrypoint auto-detects the cert and switches from HTTP-only to HTTPS. Rotate by replacing the files on disk and running `docker kill -s HUP parsedmarc-nginx parsedmarc-postfix`. Internal-CA, self-signed, and externally-managed certs all work this way.
+
+**Terminate TLS upstream.** If an upstream reverse proxy or load balancer already handles HTTPS, drop nginx and certbot entirely by reusing the dev override:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+```
+
+Dashboards exposes port 5601, OpenSearch exposes 9200, and Postfix listens on 2525 — point your upstream at those. You'll want to replicate the login rate-limiting nginx provides at your perimeter, and the dev override disables OpenSearch's security plugin for local testing, so review `docker-compose.dev.yml` before using it in a real deployment.
+
 ### How can I review mailbox messages in the maildir created by postfix?
 
 After parsedmarc processes emails, it moves them out of the inbox into Maildir archive subfolders. Messages won't be in `Maildir/new/` or `Maildir/cur/` — they'll be in `.Archive.Aggregate/`, `.Archive.Invalid/`, or `.Archive.Forensic/` under the Maildir root.
@@ -714,14 +757,6 @@ View a specific message:
 ```bash
 docker exec parsedmarc-postfix cat /var/mail/dmarc/Maildir//.Archive.Aggregate/cur/<filename>
 ```
-
-### I don't want to expose SMTP, can I use the Gmail or Microsoft Graph API instead?
-
-Yes. You can modify the docker-compose file to do that. Just remove the `postfix` service, then configure the parsedmarc service [environment variables](https://domainaware.github.io/parsedmarc/usage.html#environment-variable-configuration) to use parsedmarc's built-in support for Microsoft Graph or the Google APIs.
-
-### Handling DMARC authorization DNS records is a pain. Can this project handle them at scale?
-
-Yes. Over 40 tests are DNS-related, covering bulk onboarding/offboarding at scale, DNS cleanup, consistency, interleaved operations, pre-existing records, and race conditions. A `cleanup-dns` command reconciles the DNS zone against the database to remove orphaned records. Keep in mind that this is still a beta project created with the help of AI and my own testing. Do your own testing before deploying in production.
 
 ## License
 
