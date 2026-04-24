@@ -39,6 +39,17 @@
   IDs present in the template are touched; user-created saved objects in
   the tenant are left alone.
 
+### Changed
+
+- `dmarcmsp dashboard import` / `import-all` (with or without `--replace`)
+  now auto-refresh each tenant's index-pattern field caches against the
+  live OpenSearch mapping at the end of the import. The template's
+  baked-in `attributes.fields` list goes stale whenever parsedmarc adds
+  or renames fields, and OSD never refreshes it on its own — without
+  this, visualizations referencing new fields (`source_asn`, etc.)
+  rendered with "no cached mapping" errors until the operator chased the
+  import with a separate `migrate refresh-index-fields`.
+
 ### Fixed
 
 - `DashboardService._import_saved_objects` now logs per-object import

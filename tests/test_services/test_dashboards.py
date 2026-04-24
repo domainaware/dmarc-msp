@@ -324,12 +324,19 @@ def test_import_for_client_replace_deletes_all_template_ids(tmp_path):
     mock_response.raise_for_status = MagicMock()
     mock_response.status_code = 200
 
+    # refresh_index_pattern_fields (auto-run after replace) GETs
+    # /_find?type=index-pattern. An empty result makes that loop a no-op.
+    find_response = MagicMock()
+    find_response.json.return_value = {"saved_objects": []}
+    find_response.raise_for_status = MagicMock()
+
     with patch("dmarc_msp.services.dashboards.httpx.Client") as mock_client_cls:
         mock_client = MagicMock()
         mock_client.__enter__ = MagicMock(return_value=mock_client)
         mock_client.__exit__ = MagicMock(return_value=False)
         mock_client.post.return_value = mock_response
         mock_client.delete.return_value = mock_response
+        mock_client.get.return_value = find_response
         mock_client_cls.return_value = mock_client
 
         svc.import_for_client("acme_tenant", "acme_corp", replace=True)
@@ -338,6 +345,70 @@ def test_import_for_client_replace_deletes_all_template_ids(tmp_path):
         assert any("index-pattern/agg-id" in u for u in deleted_urls)
         assert any("visualization/viz-id" in u for u in deleted_urls)
         assert any("dashboard/dash-id" in u for u in deleted_urls)
+
+
+@pytest.mark.parametrize("replace", [True, False])
+def test_import_for_client_refreshes_index_pattern_fields(tmp_path, replace):
+    """Every import — plain or ``replace=True`` — re-runs the index-pattern
+    field refresh. The template's baked-in ``attributes.fields`` list goes
+    stale whenever parsedmarc adds or renames fields, and OSD never
+    auto-refreshes, so leaving this to the operator means visualizations
+    silently break on freshly-imported tenants."""
+    lines = [
+        json.dumps(
+            {
+                "type": "index-pattern",
+                "id": "agg-id",
+                "attributes": {"title": "dmarc_aggregate*"},
+                "references": [],
+            }
+        ),
+    ]
+    svc = _make_template(tmp_path, lines)
+
+    import_response = MagicMock()
+    import_response.json.return_value = {"success": True}
+    import_response.raise_for_status = MagicMock()
+    import_response.status_code = 200
+
+    find_response = MagicMock()
+    find_response.json.return_value = {
+        "saved_objects": [
+            {"id": "agg-id", "attributes": {"title": "acme_corp_dmarc_aggregate*"}},
+        ]
+    }
+    find_response.raise_for_status = MagicMock()
+
+    fields_response = MagicMock()
+    fields_response.json.return_value = {"fields": [{"name": "source_asn"}]}
+    fields_response.raise_for_status = MagicMock()
+
+    put_response = MagicMock()
+    put_response.raise_for_status = MagicMock()
+
+    with patch("dmarc_msp.services.dashboards.httpx.Client") as mock_client_cls:
+        mock_client = MagicMock()
+        mock_client.__enter__ = MagicMock(return_value=mock_client)
+        mock_client.__exit__ = MagicMock(return_value=False)
+        mock_client.post.return_value = import_response
+        mock_client.delete.return_value = import_response
+
+        def _get(url, *args, **kwargs):
+            if "/_find" in url:
+                return find_response
+            return fields_response
+
+        mock_client.get.side_effect = _get
+        mock_client.put.return_value = put_response
+        mock_client_cls.return_value = mock_client
+
+        svc.import_for_client("acme_tenant", "acme_corp", replace=replace)
+
+        # The index-pattern's attributes.fields is PUT back with the live
+        # mapping — that's how refresh_index_pattern_fields writes its
+        # result.
+        put_urls = [call.args[0] for call in mock_client.put.call_args_list]
+        assert any("index-pattern/agg-id" in u for u in put_urls)
 
 
 def test_import_for_client_no_replace_does_not_delete_template(tmp_path):
