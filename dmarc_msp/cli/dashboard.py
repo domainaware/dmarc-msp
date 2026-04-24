@@ -16,6 +16,15 @@ console = Console()
 @app.command("import")
 def import_dashboards(
     client: str = typer.Argument(..., help="Client name"),
+    replace: bool = typer.Option(
+        False,
+        "--replace",
+        help=(
+            "Delete every template saved object from the tenant before "
+            "importing. Use when an overwrite import silently fails to "
+            "update a dashboard or visualization."
+        ),
+    ),
     config: str | None = typer.Option(None, "--config", "-c"),
 ):
     """Import dashboards into a client's tenant."""
@@ -25,7 +34,9 @@ def import_dashboards(
         client_svc = ClientService(db)
         client_row = client_svc.get(client)
         dash_svc = DashboardService(settings.dashboards, settings.opensearch)
-        dash_svc.import_for_client(client_row.tenant_name, client_row.index_prefix)
+        dash_svc.import_for_client(
+            client_row.tenant_name, client_row.index_prefix, replace=replace
+        )
         console.print(
             f"Imported dashboards for [bold]{client_row.name}[/bold] "
             f"(tenant={client_row.tenant_name})"
@@ -65,6 +76,15 @@ def dark_mode(
 
 @app.command("import-all")
 def import_all_dashboards(
+    replace: bool = typer.Option(
+        False,
+        "--replace",
+        help=(
+            "Delete every template saved object from each tenant before "
+            "importing. Use when an overwrite import silently fails to "
+            "update a dashboard or visualization."
+        ),
+    ),
     config: str | None = typer.Option(None, "--config", "-c"),
 ):
     """Re-import dashboards into every active client's tenant."""
@@ -82,7 +102,9 @@ def import_all_dashboards(
         for client_row in clients:
             try:
                 dash_svc.import_for_client(
-                    client_row.tenant_name, client_row.index_prefix
+                    client_row.tenant_name,
+                    client_row.index_prefix,
+                    replace=replace,
                 )
                 console.print(
                     f"  [green]✓[/green] {client_row.name} "

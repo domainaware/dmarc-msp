@@ -32,9 +32,24 @@ class DashboardService:
         self.dark_mode = dashboards_config.dark_mode
         self.import_failure_reports = dashboards_config.import_failure_reports
 
-    def import_for_client(self, tenant_name: str, index_prefix: str) -> None:
+    def import_for_client(
+        self,
+        tenant_name: str,
+        index_prefix: str,
+        *,
+        replace: bool = False,
+    ) -> None:
         """Rewrite the template NDJSON with the client's index prefix
-        and import into their tenant."""
+        and import into their tenant.
+
+        When ``replace`` is True, every template saved object is deleted
+        from the tenant before the import runs. Use this to work around
+        cases where ``_import?overwrite=true`` silently skips updates —
+        e.g. OSD's version-conflict handling on an existing dashboard —
+        or to guarantee the tenant's template objects exactly match the
+        current NDJSON. Only the IDs present in the template are touched;
+        user-created saved objects in the tenant are left alone.
+        """
         if not self.template_path.exists():
             raise FileNotFoundError(
                 f"Dashboard template not found: {self.template_path}"
@@ -43,6 +58,8 @@ class DashboardService:
         rewritten = self._rewrite_template(index_prefix)
         if not self.import_failure_reports:
             self._delete_failure_objects(tenant_name, index_prefix)
+        if replace:
+            self._delete_template_objects(tenant_name, rewritten)
         self._import_saved_objects(tenant_name, rewritten)
         default_index_id = self._find_default_index_id(rewritten)
         settings: dict[str, object] = {}
@@ -257,16 +274,38 @@ class DashboardService:
             for obj in all_objects
             if obj.get("id") and obj.get("id") not in kept_ids
         ]
+        self._delete_saved_objects(tenant_name, failure_objects)
 
-        if not failure_objects:
+    def _delete_template_objects(self, tenant_name: str, ndjson: str) -> None:
+        """Delete every template saved object from a tenant, keyed by the
+        (type, id) pairs in the already-rewritten NDJSON. Used by
+        ``replace=True`` so the subsequent import starts from a clean slate
+        and is unaffected by OSD's version-conflict handling on overwrite.
+        User-created saved objects (IDs not in the template) are untouched.
+        """
+        objects = [
+            json.loads(line)
+            for line in ndjson.split("\n")
+            if line.strip() and line.lstrip().startswith("{")
+        ]
+        template_objects = [
+            obj for obj in objects if obj.get("id") and obj.get("type")
+        ]
+        self._delete_saved_objects(tenant_name, template_objects)
+
+    def _delete_saved_objects(
+        self, tenant_name: str, objects: list[dict]
+    ) -> None:
+        """Delete a list of saved objects from a tenant by (type, id).
+        Objects that don't exist (404) are treated as already gone."""
+        if not objects:
             return
-
         headers = {
             "osd-xsrf": "true",
             "securitytenant": tenant_name,
         }
         with httpx.Client(verify=False, auth=self.auth, timeout=30) as client:
-            for obj in failure_objects:
+            for obj in objects:
                 obj_type = obj["type"]
                 obj_id = obj["id"]
                 url = f"{self.dashboards_url}/api/saved_objects/{obj_type}/{obj_id}"

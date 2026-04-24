@@ -283,6 +283,109 @@ def test_import_deletes_failure_objects_from_existing_tenant(tmp_path):
         assert not any("agg-id" in url for url in deleted_urls)
 
 
+def test_import_for_client_replace_deletes_all_template_ids(tmp_path):
+    """With ``replace=True`` every template object is deleted from the
+    tenant by (type, id) before import. Used to bypass OSD's silent
+    failure mode when _import?overwrite=true skips updates."""
+    lines = [
+        json.dumps(
+            {
+                "type": "index-pattern",
+                "id": "agg-id",
+                "attributes": {"title": "dmarc_aggregate*"},
+                "references": [],
+            }
+        ),
+        json.dumps(
+            {
+                "type": "visualization",
+                "id": "viz-id",
+                "attributes": {"title": "Some viz"},
+                "references": [
+                    {"id": "agg-id", "name": "index", "type": "index-pattern"}
+                ],
+            }
+        ),
+        json.dumps(
+            {
+                "type": "dashboard",
+                "id": "dash-id",
+                "attributes": {"title": "Some dashboard"},
+                "references": [
+                    {"id": "viz-id", "name": "panel_0", "type": "visualization"}
+                ],
+            }
+        ),
+    ]
+    svc = _make_template(tmp_path, lines)
+
+    mock_response = MagicMock()
+    mock_response.json.return_value = {"success": True}
+    mock_response.raise_for_status = MagicMock()
+    mock_response.status_code = 200
+
+    with patch("dmarc_msp.services.dashboards.httpx.Client") as mock_client_cls:
+        mock_client = MagicMock()
+        mock_client.__enter__ = MagicMock(return_value=mock_client)
+        mock_client.__exit__ = MagicMock(return_value=False)
+        mock_client.post.return_value = mock_response
+        mock_client.delete.return_value = mock_response
+        mock_client_cls.return_value = mock_client
+
+        svc.import_for_client("acme_tenant", "acme_corp", replace=True)
+
+        deleted_urls = [call.args[0] for call in mock_client.delete.call_args_list]
+        assert any("index-pattern/agg-id" in u for u in deleted_urls)
+        assert any("visualization/viz-id" in u for u in deleted_urls)
+        assert any("dashboard/dash-id" in u for u in deleted_urls)
+
+
+def test_import_for_client_no_replace_does_not_delete_template(tmp_path):
+    """Without ``replace=True`` the template IDs are not deleted. Only
+    failure objects (which are deleted by a separate path when
+    import_failure_reports=False) should be removed."""
+    lines = [
+        json.dumps(
+            {
+                "type": "index-pattern",
+                "id": "agg-id",
+                "attributes": {"title": "dmarc_aggregate*"},
+                "references": [],
+            }
+        ),
+        json.dumps(
+            {
+                "type": "visualization",
+                "id": "viz-id",
+                "attributes": {"title": "Some viz"},
+                "references": [
+                    {"id": "agg-id", "name": "index", "type": "index-pattern"}
+                ],
+            }
+        ),
+    ]
+    svc = _make_template(tmp_path, lines)
+
+    mock_response = MagicMock()
+    mock_response.json.return_value = {"success": True}
+    mock_response.raise_for_status = MagicMock()
+    mock_response.status_code = 200
+
+    with patch("dmarc_msp.services.dashboards.httpx.Client") as mock_client_cls:
+        mock_client = MagicMock()
+        mock_client.__enter__ = MagicMock(return_value=mock_client)
+        mock_client.__exit__ = MagicMock(return_value=False)
+        mock_client.post.return_value = mock_response
+        mock_client.delete.return_value = mock_response
+        mock_client_cls.return_value = mock_client
+
+        svc.import_for_client("acme_tenant", "acme_corp")  # replace defaults False
+
+        deleted_urls = [call.args[0] for call in mock_client.delete.call_args_list]
+        assert not any("agg-id" in u for u in deleted_urls)
+        assert not any("viz-id" in u for u in deleted_urls)
+
+
 def test_import_for_client_sets_default_index(tmp_path):
     """The aggregate index-pattern ID is set as defaultIndex during import."""
     lines = [
