@@ -689,7 +689,7 @@ touch domain_map.yaml
 
 ### Handling DMARC authorization DNS records is a pain. Can this project handle them at scale?
 
-Yes. Over 40 tests are DNS-related, covering bulk onboarding/offboarding at scale, DNS cleanup, consistency, interleaved operations, pre-existing records, and race conditions. A `cleanup-dns` command reconciles the DNS zone against the database to remove orphaned records. Keep in mind that this is still a beta project created with the help of AI and my own testing. Do your own testing before deploying in production.
+Yes. Over 100 tests are DNS-related, covering bulk onboarding/offboarding at scale, DNS cleanup, consistency, interleaved operations, pre-existing records, and race conditions. A `cleanup-dns` command reconciles the DNS zone against the database to remove orphaned records. Keep in mind that this is still a beta project created with the help of AI and my own testing. Do your own testing before deploying in production.
 
 ### I don't want to expose SMTP, can I use the Gmail or Microsoft Graph API instead?
 
