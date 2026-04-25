@@ -181,9 +181,7 @@ class DashboardService:
         skipped = 0
         with httpx.Client(verify=False, auth=self.auth, timeout=30) as client:
             for obj_id, expected_title in targets:
-                url = (
-                    f"{self.dashboards_url}/api/saved_objects/visualization/{obj_id}"
-                )
+                url = f"{self.dashboards_url}/api/saved_objects/visualization/{obj_id}"
                 resp = client.get(url, headers=headers)
                 if resp.status_code == 404:
                     skipped += 1
@@ -370,14 +368,10 @@ class DashboardService:
             for line in ndjson.split("\n")
             if line.strip() and line.lstrip().startswith("{")
         ]
-        template_objects = [
-            obj for obj in objects if obj.get("id") and obj.get("type")
-        ]
+        template_objects = [obj for obj in objects if obj.get("id") and obj.get("type")]
         self._delete_saved_objects(tenant_name, template_objects)
 
-    def _delete_saved_objects(
-        self, tenant_name: str, objects: list[dict]
-    ) -> None:
+    def _delete_saved_objects(self, tenant_name: str, objects: list[dict]) -> None:
         """Delete a list of saved objects from a tenant by (type, id).
         Objects that don't exist (404) are treated as already gone."""
         if not objects:

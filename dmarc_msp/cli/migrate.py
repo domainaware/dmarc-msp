@@ -258,9 +258,7 @@ def run_all(
         )
 
         console.print("[bold]4/4[/bold] Cleaning up orphaned visualizations…")
-        viz_failed = _cleanup_orphan_viz_for_clients(
-            settings, clients, indent="    "
-        )
+        viz_failed = _cleanup_orphan_viz_for_clients(settings, clients, indent="    ")
     finally:
         db.close()
 
