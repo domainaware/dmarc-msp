@@ -533,3 +533,116 @@ def test_import_for_client_api_failure(tmp_path):
 
         with pytest.raises(RuntimeError, match="import failed"):
             svc.import_for_client("acme_tenant", "acme_corp")
+
+
+def _viz_get_response(title: str | None, status_code: int = 200) -> MagicMock:
+    resp = MagicMock()
+    resp.status_code = status_code
+    if title is None:
+        resp.json.return_value = {}
+    else:
+        resp.json.return_value = {"id": "x", "attributes": {"title": title}}
+    resp.raise_for_status = MagicMock()
+    return resp
+
+
+def test_delete_orphaned_visualizations_deletes_when_id_and_title_match(tmp_path):
+    svc = _make_template(tmp_path)
+    targets = (("orphan-id-1", "Orphan One"), ("orphan-id-2", "Orphan Two"))
+
+    get_responses = [
+        _viz_get_response("Orphan One"),
+        _viz_get_response("Orphan Two"),
+    ]
+    delete_response = MagicMock()
+    delete_response.status_code = 200
+    delete_response.raise_for_status = MagicMock()
+
+    with patch("dmarc_msp.services.dashboards.httpx.Client") as mock_client_cls:
+        mock_client = MagicMock()
+        mock_client.__enter__ = MagicMock(return_value=mock_client)
+        mock_client.__exit__ = MagicMock(return_value=False)
+        mock_client.get.side_effect = get_responses
+        mock_client.delete.return_value = delete_response
+        mock_client_cls.return_value = mock_client
+
+        deleted, skipped = svc.delete_orphaned_visualizations(
+            "acme_tenant", expected=targets
+        )
+
+    assert (deleted, skipped) == (2, 0)
+    deleted_urls = [call.args[0] for call in mock_client.delete.call_args_list]
+    assert any("visualization/orphan-id-1" in u for u in deleted_urls)
+    assert any("visualization/orphan-id-2" in u for u in deleted_urls)
+    # Tenant header is set on each call.
+    for call in mock_client.delete.call_args_list:
+        assert call.kwargs["headers"]["securitytenant"] == "acme_tenant"
+
+
+def test_delete_orphaned_visualizations_skips_when_title_differs(tmp_path):
+    """If a saved object exists at the orphan ID but its title doesn't match,
+    skip it — a user may have renamed an unrelated viz to that ID, and we
+    don't want to delete it. Mismatched entry is skipped; matched entry is
+    deleted."""
+    svc = _make_template(tmp_path)
+    targets = (("orphan-id-1", "Orphan One"), ("orphan-id-2", "Orphan Two"))
+
+    get_responses = [
+        _viz_get_response("User Renamed This"),
+        _viz_get_response("Orphan Two"),
+    ]
+    delete_response = MagicMock()
+    delete_response.status_code = 200
+    delete_response.raise_for_status = MagicMock()
+
+    with patch("dmarc_msp.services.dashboards.httpx.Client") as mock_client_cls:
+        mock_client = MagicMock()
+        mock_client.__enter__ = MagicMock(return_value=mock_client)
+        mock_client.__exit__ = MagicMock(return_value=False)
+        mock_client.get.side_effect = get_responses
+        mock_client.delete.return_value = delete_response
+        mock_client_cls.return_value = mock_client
+
+        deleted, skipped = svc.delete_orphaned_visualizations(
+            "acme_tenant", expected=targets
+        )
+
+    assert (deleted, skipped) == (1, 1)
+    assert mock_client.delete.call_count == 1
+    deleted_url = mock_client.delete.call_args_list[0].args[0]
+    assert "visualization/orphan-id-2" in deleted_url
+    assert "visualization/orphan-id-1" not in deleted_url
+
+
+def test_delete_orphaned_visualizations_skips_missing_objects(tmp_path):
+    """A 404 from the saved-object GET means the orphan was already cleaned
+    up (or never imported), and the migration is a no-op for that ID. It
+    must not fail the run — the command needs to be idempotent."""
+    svc = _make_template(tmp_path)
+    targets = (("orphan-id-1", "Orphan One"),)
+
+    with patch("dmarc_msp.services.dashboards.httpx.Client") as mock_client_cls:
+        mock_client = MagicMock()
+        mock_client.__enter__ = MagicMock(return_value=mock_client)
+        mock_client.__exit__ = MagicMock(return_value=False)
+        mock_client.get.return_value = _viz_get_response(None, status_code=404)
+        mock_client_cls.return_value = mock_client
+
+        deleted, skipped = svc.delete_orphaned_visualizations(
+            "acme_tenant", expected=targets
+        )
+
+    assert (deleted, skipped) == (0, 1)
+    mock_client.delete.assert_not_called()
+
+
+def test_delete_orphaned_visualizations_default_targets_match_pr_728():
+    """The default ``ORPHANED_VISUALIZATIONS`` list must include the two
+    visualizations dropped by upstream parsedmarc PR #728, since the whole
+    point of this migration is cleaning them up after the NDJSON refresh."""
+    ids = {oid for oid, _ in DashboardService.ORPHANED_VISUALIZATIONS}
+    titles = {title for _, title in DashboardService.ORPHANED_VISUALIZATIONS}
+    assert "25f321e0-26d0-11f1-96a6-fb3734bd0b21" in ids
+    assert "12065020-26d1-11f1-96a6-fb3734bd0b21" in ids
+    assert "SMTP TLS sessions" in titles
+    assert "TLSRPT policies" in titles

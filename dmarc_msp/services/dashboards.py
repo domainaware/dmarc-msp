@@ -21,6 +21,17 @@ class DashboardService:
     # index_prefix_domain_map, so rewriting prepends the client prefix.
     TEMPLATE_PATTERNS = ["dmarc_aggregate", "dmarc_f", "smtp_tls"]
 
+    # Visualizations that shipped in earlier NDJSON revisions but are no
+    # longer referenced by any dashboard. Re-importing the new template
+    # leaves these as orphans inside each tenant; the cleanup migration
+    # removes them only when both ID and title match (so user-created
+    # objects that happen to share an ID are left alone).
+    # Source: upstream parsedmarc PR #728 (SMTP TLS dashboard restructure).
+    ORPHANED_VISUALIZATIONS: tuple[tuple[str, str], ...] = (
+        ("25f321e0-26d0-11f1-96a6-fb3734bd0b21", "SMTP TLS sessions"),
+        ("12065020-26d1-11f1-96a6-fb3734bd0b21", "TLSRPT policies"),
+    )
+
     def __init__(
         self,
         dashboards_config: DashboardsConfig,
@@ -142,6 +153,65 @@ class DashboardService:
                 )
                 refreshed += 1
         return refreshed
+
+    def delete_orphaned_visualizations(
+        self,
+        tenant_name: str,
+        expected: tuple[tuple[str, str], ...] | None = None,
+    ) -> tuple[int, int]:
+        """Delete visualizations from prior NDJSON revisions that are no
+        longer referenced by any shipped dashboard.
+
+        For each ``(id, title)`` pair, the saved object must already exist
+        in the tenant *and* its ``attributes.title`` must match the
+        expected title. Mismatches and 404s are skipped, so user-created
+        objects that happen to share an ID with a retired visualization
+        are not touched.
+
+        Returns ``(deleted, skipped)``.
+        """
+        targets = expected if expected is not None else self.ORPHANED_VISUALIZATIONS
+        if not targets:
+            return (0, 0)
+        headers = {
+            "osd-xsrf": "true",
+            "securitytenant": tenant_name,
+        }
+        deleted = 0
+        skipped = 0
+        with httpx.Client(verify=False, auth=self.auth, timeout=30) as client:
+            for obj_id, expected_title in targets:
+                url = f"{self.dashboards_url}/api/saved_objects/visualization/{obj_id}"
+                resp = client.get(url, headers=headers)
+                if resp.status_code == 404:
+                    skipped += 1
+                    continue
+                resp.raise_for_status()
+                actual_title = resp.json().get("attributes", {}).get("title")
+                if actual_title != expected_title:
+                    logger.info(
+                        "Skipping visualization %s in tenant=%s: "
+                        "title %r != expected %r",
+                        obj_id,
+                        tenant_name,
+                        actual_title,
+                        expected_title,
+                    )
+                    skipped += 1
+                    continue
+                del_resp = client.delete(url, headers=headers)
+                if del_resp.status_code == 404:
+                    skipped += 1
+                    continue
+                del_resp.raise_for_status()
+                deleted += 1
+                logger.info(
+                    "Deleted orphaned visualization %r (%s) from tenant=%s",
+                    expected_title,
+                    obj_id,
+                    tenant_name,
+                )
+        return deleted, skipped
 
     def _set_tenant_settings(
         self, tenant_name: str, changes: dict[str, object]
@@ -298,14 +368,10 @@ class DashboardService:
             for line in ndjson.split("\n")
             if line.strip() and line.lstrip().startswith("{")
         ]
-        template_objects = [
-            obj for obj in objects if obj.get("id") and obj.get("type")
-        ]
+        template_objects = [obj for obj in objects if obj.get("id") and obj.get("type")]
         self._delete_saved_objects(tenant_name, template_objects)
 
-    def _delete_saved_objects(
-        self, tenant_name: str, objects: list[dict]
-    ) -> None:
+    def _delete_saved_objects(self, tenant_name: str, objects: list[dict]) -> None:
         """Delete a list of saved objects from a tenant by (type, id).
         Objects that don't exist (404) are treated as already gone."""
         if not objects:

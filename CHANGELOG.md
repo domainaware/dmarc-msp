@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.6.6 2026-04-25
+
+### Changed
+
+- Refreshed `opensearch/opensearch_dashboards.ndjson` to match upstream
+  parsedmarc [PR #728](https://github.com/domainaware/parsedmarc/pull/728),
+  which restructures the SMTP TLS reporting dashboard into three
+  sum-only `data_table` visualizations (Reporting organizations,
+  Domains, Failure details) mirroring the Splunk layout. The dashboard
+  ID is preserved, three visualization IDs are reused, and two
+  visualizations from the previous layout are dropped.
+
+### Added
+
+- `dmarcmsp migrate cleanup-orphan-viz` — removes visualizations from
+  prior NDJSON revisions that are no longer referenced by any shipped
+  dashboard. Currently targets the two visualizations dropped by
+  parsedmarc PR #728: `SMTP TLS sessions`
+  (`25f321e0-26d0-11f1-96a6-fb3734bd0b21`) and `TLSRPT policies`
+  (`12065020-26d1-11f1-96a6-fb3734bd0b21`). Each entry is an
+  `(id, title)` pair, and a saved object is only deleted when both
+  match — user-created objects that happen to share an ID with a
+  retired visualization are left alone. Also wired into `migrate all`
+  as step 4/4.
+
 ## 0.6.5 2026-04-23
 
 ### Added
