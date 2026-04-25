@@ -26,6 +26,11 @@
   ID is preserved, three visualization IDs are reused, and two
   visualizations from the previous layout are dropped.
 
+- Split SMTP TLS Reporting domains by `policy_type`
+- Updated the headers in the SMTP TLS Reporting dashboard visualization to match the rest of the project (lowercase words separated by `_`)
+- Rename the visualizations based on the dashboard they were used in to disambiguate ones with similar names
+  - Used labels to remove the unnecessary visualization title disambiguation in the dashboards
+
 ### Added
 
 - `dmarcmsp migrate cleanup-orphan-viz` — removes visualizations from
