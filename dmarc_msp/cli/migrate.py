@@ -168,6 +168,57 @@ def refill_enrichment(
     )
 
 
+@app.command("cleanup-orphan-viz")
+def cleanup_orphan_viz(
+    client: str | None = typer.Option(
+        None, "--client", help="Run for a single client (default: all)."
+    ),
+    config: str | None = typer.Option(None, "--config", "-c"),
+):
+    """Delete visualizations left behind by older versions of the
+    bundled NDJSON.
+
+    The list of orphans is hard-coded in ``DashboardService``. Each
+    entry is an ``(id, title)`` pair, and a visualization is only
+    removed when both match — user-created saved objects that happen
+    to share an ID with a retired visualization are left alone.
+    """
+    settings = get_settings(config)
+    db = get_db_session(settings)
+    try:
+        client_svc = ClientService(db)
+        if client:
+            clients = [client_svc.get(client)]
+        else:
+            clients = client_svc.list(include_offboarded=False)
+        if not clients:
+            console.print("No active clients found.")
+            return
+        failed = _cleanup_orphan_viz_for_clients(settings, clients)
+        if failed:
+            raise typer.Exit(1)
+    finally:
+        db.close()
+
+
+def _cleanup_orphan_viz_for_clients(settings, clients, indent: str = "  ") -> int:
+    """Delete orphan visualizations across each tenant. Returns the
+    number of tenants that failed."""
+    dash_svc = DashboardService(settings.dashboards, settings.opensearch)
+    failed = 0
+    for c in clients:
+        try:
+            deleted, skipped = dash_svc.delete_orphaned_visualizations(c.tenant_name)
+            console.print(
+                f"{indent}[green]✓[/green] {c.name} (tenant={c.tenant_name}) "
+                f"— deleted {deleted}, skipped {skipped}"
+            )
+        except Exception as e:
+            failed += 1
+            console.print(f"{indent}[red]✗[/red] {c.name}: {e}")
+    return failed
+
+
 @app.command("all")
 def run_all(
     fields: str = typer.Option(
@@ -177,33 +228,41 @@ def run_all(
     ),
     config: str | None = typer.Option(None, "--config", "-c"),
 ):
-    """Run all three migrations in order: rename ASN fields, re-derive
-    IP-based enrichment, refresh index-pattern fields."""
+    """Run all migrations in order: rename ASN fields, re-derive
+    IP-based enrichment, refresh index-pattern fields, and clean up
+    orphaned visualizations."""
     field_list = _parse_fields(fields)
     settings = get_settings(config)
 
     svc = MigrationService(settings.opensearch, settings.parsedmarc.container)
-    console.print("[bold]1/3[/bold] Renaming ASN fields…")
+    console.print("[bold]1/4[/bold] Renaming ASN fields…")
     r1 = svc.rename_asn_fields()
     console.print(
         f"    scanned: {r1.total}  updated: [green]{r1.updated}[/green]  "
         f"failures: {r1.failures}"
     )
 
-    console.print(f"[bold]2/3[/bold] Re-deriving enrichment ({field_list})…")
+    console.print(f"[bold]2/4[/bold] Re-deriving enrichment ({field_list})…")
     r2 = svc.refill_enrichment_fields(fields=field_list)
     console.print(
         f"    unique IPs: {r2.unique_ips}  resolved: {r2.resolved_ips}  "
         f"docs updated: [green]{r2.updated_docs}[/green]"
     )
 
-    console.print("[bold]3/3[/bold] Refreshing index-pattern fields per tenant…")
+    console.print("[bold]3/4[/bold] Refreshing index-pattern fields per tenant…")
     db = get_db_session(settings)
     try:
         clients = ClientService(db).list(include_offboarded=False)
-        failed = _refresh_tenant_index_patterns(settings, clients, indent="    ")
+        refresh_failed = _refresh_tenant_index_patterns(
+            settings, clients, indent="    "
+        )
+
+        console.print("[bold]4/4[/bold] Cleaning up orphaned visualizations…")
+        viz_failed = _cleanup_orphan_viz_for_clients(
+            settings, clients, indent="    "
+        )
     finally:
         db.close()
 
-    if r1.failures or failed:
+    if r1.failures or refresh_failed or viz_failed:
         raise typer.Exit(1)
