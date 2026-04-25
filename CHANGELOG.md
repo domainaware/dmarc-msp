@@ -2,6 +2,20 @@
 
 ## 0.6.6 2026-04-25
 
+### Fixed
+
+- `refresh_index_pattern_fields` (and the auto-refresh that runs at the
+  end of every dashboard import) no longer strips template-defined
+  fields that aren't yet in the live OpenSearch mapping. parsedmarc
+  only writes nested fields like `policies.failure_details.*` to the
+  mapping when an actual TLSRPT report contains failure details, so
+  tenants with no failure data had those fields silently removed from
+  the cached field list — the new "Failure details" SMTP TLS
+  visualization then rendered "Could not locate that
+  index-pattern-field (id: …)" instead of "no data". Refresh now
+  unions the live response with the template's baked-in
+  `attributes.fields`, with live winning on conflict.
+
 ### Changed
 
 - Refreshed `opensearch/opensearch_dashboards.ndjson` to match upstream

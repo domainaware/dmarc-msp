@@ -111,8 +111,19 @@ class DashboardService:
         Dashboards for the current mapping-derived fields and writing them
         back onto the saved object.
 
+        The live mapping is unioned with the template's baked-in fields:
+        live wins on conflict, but template fields absent from live are
+        preserved. parsedmarc adds nested fields like
+        ``policies.failure_details.*`` to the mapping only when a doc with
+        that data arrives, so a tenant with no failure reports yet has a
+        live mapping that's a strict subset of the template. Without the
+        union, refresh would strip those fields and the SMTP TLS dashboard
+        would render "Could not locate that index-pattern-field" instead
+        of "no data".
+
         Returns the number of index-patterns refreshed.
         """
+        template_fields_by_id = self._load_template_fields_by_id()
         headers = {
             "osd-xsrf": "true",
             "securitytenant": tenant_name,
@@ -139,6 +150,12 @@ class DashboardService:
                 )
                 fields_resp.raise_for_status()
                 fields = fields_resp.json().get("fields", [])
+                template_fields = template_fields_by_id.get(oid, [])
+                if template_fields:
+                    live_names = {f.get("name") for f in fields}
+                    fields = list(fields) + [
+                        tf for tf in template_fields if tf.get("name") not in live_names
+                    ]
                 put = client.put(
                     f"{self.dashboards_url}/api/saved_objects/index-pattern/{oid}",
                     headers=headers,
@@ -153,6 +170,34 @@ class DashboardService:
                 )
                 refreshed += 1
         return refreshed
+
+    def _load_template_fields_by_id(self) -> dict[str, list[dict]]:
+        """Return ``{index_pattern_id: [field, ...]}`` from the bundled
+        NDJSON's baked-in ``attributes.fields`` strings. Used by
+        :meth:`refresh_index_pattern_fields` to preserve fields that the
+        template defines but the live mapping doesn't yet expose."""
+        if not self.template_path.exists():
+            return {}
+        by_id: dict[str, list[dict]] = {}
+        for line in self.template_path.read_text().splitlines():
+            line = line.strip()
+            if not line or not line.startswith("{"):
+                continue
+            try:
+                obj = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if obj.get("type") != "index-pattern":
+                continue
+            oid = obj.get("id")
+            fields_str = obj.get("attributes", {}).get("fields")
+            if not oid or not fields_str:
+                continue
+            try:
+                by_id[oid] = json.loads(fields_str)
+            except json.JSONDecodeError:
+                continue
+        return by_id
 
     def delete_orphaned_visualizations(
         self,

@@ -636,6 +636,147 @@ def test_delete_orphaned_visualizations_skips_missing_objects(tmp_path):
     mock_client.delete.assert_not_called()
 
 
+def test_refresh_index_pattern_fields_preserves_template_fields_absent_from_live(
+    tmp_path,
+):
+    """parsedmarc adds nested fields like ``policies.failure_details.*`` to
+    the live mapping only when a doc with that data arrives. The template
+    NDJSON ships those fields baked into ``attributes.fields`` because the
+    SMTP TLS visualizations reference them. If refresh just overwrites with
+    the live response, tenants without failure data lose those fields and
+    the dashboard renders "Could not locate that index-pattern-field"
+    instead of "no data". The fix is a union: live wins on conflict, but
+    template fields absent from live are preserved.
+    """
+    template_fields = [
+        {"name": "org_name", "type": "string"},
+        {"name": "policies.failure_details.failed_session_count", "type": "number"},
+        {"name": "policies.failure_details.result_type", "type": "string"},
+    ]
+    lines = [
+        json.dumps(
+            {
+                "type": "index-pattern",
+                "id": "smtp-id",
+                "attributes": {
+                    "title": "smtp_tls*",
+                    "fields": json.dumps(template_fields),
+                },
+                "references": [],
+            }
+        ),
+    ]
+    svc = _make_template(tmp_path, lines)
+
+    find_response = MagicMock()
+    find_response.json.return_value = {
+        "saved_objects": [
+            {"id": "smtp-id", "attributes": {"title": "acme_corp_smtp_tls*"}},
+        ]
+    }
+    find_response.raise_for_status = MagicMock()
+
+    # Live mapping has only org_name (no failure_details — no failure docs
+    # have arrived yet).
+    fields_response = MagicMock()
+    fields_response.json.return_value = {
+        "fields": [{"name": "org_name", "type": "string"}]
+    }
+    fields_response.raise_for_status = MagicMock()
+
+    put_response = MagicMock()
+    put_response.raise_for_status = MagicMock()
+
+    with patch("dmarc_msp.services.dashboards.httpx.Client") as mock_client_cls:
+        mock_client = MagicMock()
+        mock_client.__enter__ = MagicMock(return_value=mock_client)
+        mock_client.__exit__ = MagicMock(return_value=False)
+
+        def _get(url, *args, **kwargs):
+            if "/_find" in url:
+                return find_response
+            return fields_response
+
+        mock_client.get.side_effect = _get
+        mock_client.put.return_value = put_response
+        mock_client_cls.return_value = mock_client
+
+        refreshed = svc.refresh_index_pattern_fields("acme_tenant")
+
+    assert refreshed == 1
+    put_call = mock_client.put.call_args_list[0]
+    written = json.loads(put_call.kwargs["json"]["attributes"]["fields"])
+    written_names = {f["name"] for f in written}
+    assert "org_name" in written_names
+    assert "policies.failure_details.failed_session_count" in written_names
+    assert "policies.failure_details.result_type" in written_names
+
+
+def test_refresh_index_pattern_fields_live_wins_on_conflict(tmp_path):
+    """When a field appears in both live and template, the live entry
+    must win. parsedmarc may have changed the field's type (e.g.,
+    string → keyword) and the template's stale entry shouldn't override
+    the current schema."""
+    template_fields = [
+        {"name": "source_ip_address", "type": "string", "stale": True},
+    ]
+    lines = [
+        json.dumps(
+            {
+                "type": "index-pattern",
+                "id": "agg-id",
+                "attributes": {
+                    "title": "dmarc_aggregate*",
+                    "fields": json.dumps(template_fields),
+                },
+                "references": [],
+            }
+        ),
+    ]
+    svc = _make_template(tmp_path, lines)
+
+    find_response = MagicMock()
+    find_response.json.return_value = {
+        "saved_objects": [
+            {"id": "agg-id", "attributes": {"title": "acme_corp_dmarc_aggregate*"}},
+        ]
+    }
+    find_response.raise_for_status = MagicMock()
+
+    fields_response = MagicMock()
+    fields_response.json.return_value = {
+        "fields": [{"name": "source_ip_address", "type": "ip"}]
+    }
+    fields_response.raise_for_status = MagicMock()
+
+    put_response = MagicMock()
+    put_response.raise_for_status = MagicMock()
+
+    with patch("dmarc_msp.services.dashboards.httpx.Client") as mock_client_cls:
+        mock_client = MagicMock()
+        mock_client.__enter__ = MagicMock(return_value=mock_client)
+        mock_client.__exit__ = MagicMock(return_value=False)
+
+        def _get(url, *args, **kwargs):
+            if "/_find" in url:
+                return find_response
+            return fields_response
+
+        mock_client.get.side_effect = _get
+        mock_client.put.return_value = put_response
+        mock_client_cls.return_value = mock_client
+
+        svc.refresh_index_pattern_fields("acme_tenant")
+
+    written = json.loads(
+        mock_client.put.call_args_list[0].kwargs["json"]["attributes"]["fields"]
+    )
+    assert len(written) == 1
+    assert written[0]["name"] == "source_ip_address"
+    assert written[0]["type"] == "ip"
+    assert "stale" not in written[0]
+
+
 def test_delete_orphaned_visualizations_default_targets_match_pr_728():
     """The default ``ORPHANED_VISUALIZATIONS`` list must include the two
     visualizations dropped by upstream parsedmarc PR #728, since the whole
