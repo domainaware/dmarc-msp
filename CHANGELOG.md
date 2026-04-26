@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.6.8 2026-04-26
+
+### Fixed
+
+- Fixed the dashboard panel label for DKIM alignment in the DMARC
+  aggregate reports dashboard. The panel was inheriting the longer
+  underlying visualization title instead of showing the short
+  panel-level label that the SPF alignment / Passed DMARC panels
+  already used.
+
 ## 0.6.7 2026-04-25
 
 ### Fixed
