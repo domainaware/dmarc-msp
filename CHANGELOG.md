@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.6.10 2026-04-27
+
+### Fixed
+
+- "Aggregate DMARC message sources by IP address" table on the DMARC
+  aggregate dashboard: corrected the `reverse_dnss_base_domain` column
+  label typo (now `reverse_dns_base_domain`), and switched the column
+  to show `none` for source IPs whose reverse DNS has no base domain
+  instead of dropping those rows from the table.
+
+### Upgrade notes
+
+**Action required — re-import the dashboards** so existing tenants
+pick up the corrected visualization:
+
+```bash
+git pull
+docker compose up dmarc-msp --build -d
+dmarcmsp dashboard import-all --replace
+```
+
+Per-client variant: `dmarcmsp dashboard import <client> --replace`.
+
 ## 0.6.9 2026-04-27
 
 ### Fixed
