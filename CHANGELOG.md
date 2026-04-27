@@ -1,5 +1,37 @@
 # Changelog
 
+## 0.6.9 2026-04-27
+
+### Fixed
+
+- Refreshed `opensearch/opensearch_dashboards.ndjson` from upstream
+  parsedmarc [9.10.3](https://github.com/domainaware/parsedmarc/releases/tag/9.10.3),
+  which corrects an aggregation bug present in the bundled DMARC
+  aggregate dashboard since it shipped in parsedmarc 9.4.0. Pies,
+  tables, and the choropleth on the aggregate dashboard were
+  aggregating with `count` (number of source rows) instead of
+  `sum(message_count)` (number of emails), so panels titled
+  "Message volume…", "Reporting organizations", "Message sources by
+  …", etc. were under-reporting actual mail volume by one bucket per
+  aggregator-domain-day group. Line-chart timeseries, the SMTP TLS
+  dashboard, and the forensic dashboard were already correct and are
+  unchanged.
+
+### Upgrade notes
+
+**Action required — re-import the dashboards.** Saved objects in
+existing tenants don't auto-update on container upgrade; the buggy
+visualizations stay in place until they're overwritten. Run:
+
+```bash
+dmarcmsp dashboard import-all --replace
+```
+
+`--replace` deletes the template's saved objects in each tenant
+before re-importing, which sidesteps OSD's version-conflict handling
+that can silently skip updates on plain `overwrite=true` imports.
+Per-client variant: `dmarcmsp dashboard import <client> --replace`.
+
 ## 0.6.8 2026-04-26
 
 ### Fixed
