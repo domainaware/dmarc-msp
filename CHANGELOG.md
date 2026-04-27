@@ -24,6 +24,8 @@ existing tenants don't auto-update on container upgrade; the buggy
 visualizations stay in place until they're overwritten. Run:
 
 ```bash
+git pull
+docker compose up dmarc-msp --build -d
 dmarcmsp dashboard import-all --replace
 ```
 
