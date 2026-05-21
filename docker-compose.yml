@@ -1,6 +1,7 @@
 services:
   postfix:
     build: ./deploy/postfix
+    image: dmarc-msp-postfix
     container_name: parsedmarc-postfix
     ports:
       - "${SMTP_BIND_IP:-0.0.0.0}:25:25"
@@ -95,6 +96,7 @@ services:
 
   nginx:
     build: ./deploy/nginx
+    image: dmarc-msp-nginx
     container_name: parsedmarc-nginx
     ports:
       - "${HTTP_BIND_IP:-0.0.0.0}:80:80"
@@ -136,6 +138,7 @@ services:
 
   dmarc-msp:
     build: .
+    image: dmarc-msp
     container_name: dmarc-msp
     command: ["dmarcmsp", "serve"]
     ports:
