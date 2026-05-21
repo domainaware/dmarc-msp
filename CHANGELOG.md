@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.6.11 2026-05-21
+
+### Enhancements
+
+Added support for DMARCbis (RFC 9989 / RFC 9990 / RFC 9991 reports)
+
+#### Upgrade notes
+
+**Action required — re-import the dashboards** so existing tenants
+pick up the corrected visualization:
+
+```bash
+git pull
+docker pull ghcr.io/domainaware/parsedmarc
+docker compose up dmarc-msp --build -d
+dmarcmsp dashboard import-all --replace
+```
+
+Per-client variant: `dmarcmsp dashboard import <client> --replace`.
+
 ## 0.6.10 2026-04-27
 
 ### Fixed
