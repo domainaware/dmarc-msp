@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.6.12 2026-05-21
+
+### Changed
+
+- Pinned explicit `image:` names for the locally-built Compose services
+  (`dmarc-msp`, `postfix`, `nginx`). Without an `image:` key, Compose
+  named the main service's image `dmarc-msp-dmarc-msp` (the
+  `<project>-<service>` default); it is now just `dmarc-msp`. The
+  `postfix` and `nginx` images keep their existing
+  `dmarc-msp-postfix` / `dmarc-msp-nginx` names. After upgrading, the
+  old `dmarc-msp-dmarc-msp` image is left dangling — remove it with
+  `docker image rm dmarc-msp-dmarc-msp` (or `docker image prune`).
+
 ## 0.6.11 2026-05-21
 
 ### Enhancements
@@ -14,7 +27,8 @@ pick up the corrected visualization:
 ```bash
 git pull
 docker pull ghcr.io/domainaware/parsedmarc
-docker compose up dmarc-msp --build -d
+docker compose down parsedmarc
+docker compose up parsedmarc -d
 dmarcmsp dashboard import-all --replace
 ```
 
