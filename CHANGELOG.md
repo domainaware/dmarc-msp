@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.63.13 2026-07-26
+
+## Changed
+
+- Update the OpenSearch dashboards to match the latest parsedmarc release (10.4.0)
+
 ## 0.6.12 2026-05-21
 
 ### Changed
